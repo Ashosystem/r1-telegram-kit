@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=240, height=282, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Telegram v1.08</title>
+<style>
+  /* ─── Reset & Base ────────────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:        #0e0e0e;
+    --surface:   #1a1a1a;
+    --surface-h: #252525;
+    --accent:    #2aabee;   /* Telegram blue */
+    --accent-dim:#1a6fa0;
+    --text:      #e8e8e8;
+    --text-dim:  #888;
+    --out-bg:    #2b5278;
+    --in-bg:     #1e1e1e;
+    --danger:    #e53935;
+    --confirm:   #43a047;
+    --badge:     #e53935;
+    --font:      'SF Pro Text', -apple-system, 'Segoe UI', sans-serif;
+    --mono:      'SF Mono', 'Menlo', monospace;
+  }
+
+  html, body {
+    width: 240px;
+    height: 282px;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    line-height: 1.3;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ─── Screen Container ────────────────────────────────────────── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+  }
+  .screen.active { display: flex; }
+
+  /* ─── Header Bar ──────────────────────────────────────────────── */
+  .header {
+    height: 28px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    background: var(--surface);
+    border-bottom: 1px solid #2a2a2a;
+    gap: 6px;
+  }
+  .header .title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header .back {
+    font-size: 26px;
+    color: var(--accent);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 6px;
+    margin: -4px -6px;
+  }
+  .header .badge-total {
+    background: var(--badge);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 8px;
+    min-width: 16px;
+    text-align: center;
+  }
+
+  /* ─── Chat List ───────────────────────────────────────────────── */
+  .chat-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chat-list::-webkit-scrollbar { width: 2px; }
+  .chat-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .chat-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid #1f1f1f;
+    cursor: pointer;
+    gap: 7px;
+    min-height: 38px;
+    transition: background 0.1s;
+  }
+  .chat-item.selected { background: var(--surface-h); }
+  .chat-item:active { background: var(--surface-h); }
+
+  .chat-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .chat-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .chat-name {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .chat-preview {
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .chat-time {
+    font-size: 8px;
+    color: var(--text-dim);
+  }
+  .unread-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 7px;
+    min-width: 14px;
+    text-align: center;
+  }
+
+  /* ─── Chat View ───────────────────────────────────────────────── */
+  .messages-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .messages-list::-webkit-scrollbar { width: 2px; }
+  .messages-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .msg-bubble {
+    max-width: 85%;
+    padding: 4px 7px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.35;
+    word-wrap: break-word;
+  }
+  .msg-bubble.in {
+    background: var(--in-bg);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+  }
+  .msg-bubble.out {
+    background: var(--out-bg);
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+  }
+  .msg-sender {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 1px;
+  }
+  .msg-time {
+    font-size: 7px;
+    color: rgba(255,255,255,0.4);
+    text-align: right;
+    margin-top: 1px;
+  }
+
+  /* ─── Status Bar (bottom) ─────────────────────────────────────── */
+  .status-bar {
+    height: 22px;
+    min-height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border-top: 1px solid #2a2a2a;
+    font-size: 8px;
+    color: var(--text-dim);
+    gap: 4px;
+  }
+  .status-bar .hint {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ─── Recording Overlay ───────────────────────────────────────── */
+  .recording-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 100;
+  }
+  .recording-overlay.active { display: flex; }
+
+  .rec-ring {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid var(--danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .rec-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--danger);
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+  }
+  .rec-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--danger);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .rec-hint {
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  /* ─── Confirm Screen ──────────────────────────────────────────── */
+  .confirm-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+  }
+  .confirm-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .confirm-text {
+    flex: 1;
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text);
+    overflow-y: auto;
+    border: 1px solid #2a2a2a;
+  }
+  .confirm-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .confirm-actions button {
+    flex: 1;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn-cancel { background: #333; }
+  .btn-send   { background: var(--confirm); }
+
+  /* ─── Loading / Error States ──────────────────────────────────── */
+  .state-msg {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 16px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid #333;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Login Screen ───────────────────────────────────────────────── */
+  .login-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 10px 8px;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .login-step {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+  .login-step.active { display: flex; }
+
+  .login-intro {
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .login-intro strong { color: var(--accent); font-weight: 600; }
+
+  .login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .login-field label {
+    font-size: 8px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .login-field input {
+    background: var(--surface);
+    border: 1px solid #2a2a2a;
+    border-radius: 5px;
+    padding: 7px 8px;
+    font-size: 11px;
+    color: var(--text);
+    font-family: var(--font);
+    outline: none;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  .login-field input:focus { border-color: var(--accent-dim); }
+  .login-field input::placeholder { color: #444; }
+
+  .login-error {
+    font-size: 9px;
+    color: var(--danger);
+    min-height: 12px;
+    line-height: 1.4;
+  }
+  .login-spacer { flex: 1; }
+
+  .login-btn {
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+  }
+  .login-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* ─── Toast ───────────────────────────────────────────────────── */
+  .toast {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(40px);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 9px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    opacity: 0;
+    transition: all 0.25s ease;
+    z-index: 200;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: Chat List                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-list" class="screen active">
+  <div class="header">
+    <div class="title">Telegram</div>
+    <div id="conn-dot" style="width:6px;height:6px;border-radius:50%;background:#f9a825" title="connecting"></div>
+    <div class="badge-total" id="total-unread" style="display:none">0</div>
+  </div>
+  <div class="chat-list" id="chat-list"></div>
+  <div class="status-bar">
+    <span>Scroll: navigate</span>
+    <span class="hint">PTT: open</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: Chat View                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-chat" class="screen">
+  <div class="header">
+    <div class="back" id="btn-back">‹</div>
+    <div class="title" id="chat-title">Chat</div>
+  </div>
+  <div class="messages-list" id="messages-list"></div>
+  <div id="ptt-btn" style="
+    height: 36px; min-height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: #1a1a1a; border-top: 1px solid #2a2a2a;
+    font-size: 11px; font-weight: 600; color: #2aabee;
+    user-select: none; -webkit-user-select: none;
+    cursor: pointer; letter-spacing: 0.5px;
+  ">🎙 HOLD TO SPEAK</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: Confirm Send                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-confirm" class="screen">
+  <div class="header">
+    <div class="title">Confirm Message</div>
+  </div>
+  <div class="confirm-body">
+    <div class="confirm-label">Transcription</div>
+    <div class="confirm-text" id="confirm-text"></div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" id="btn-discard">Cancel</button>
+      <button class="btn-send" id="btn-confirm-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Setup Screen (first run — no backend configured) -->
+<div id="screen-setup" class="screen">
+  <div class="header">
+    <div class="title">Setup</div>
+  </div>
+  <div class="confirm-body" style="gap:6px">
+    <div class="confirm-label">Backend URL</div>
+    <input type="text" id="setup-url" placeholder="https://your-backend.com"
+      style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:6px;font-size:10px;color:#e8e8e8;font-family:inherit;outline:none;width:100%">
+    <div class="confirm-label" style="margin-top:2px">Auth Token</div>
+    <input type="text" id="setup-token" placeholder="your-secret-token"
+      style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:6px;font-size:10px;color:#e8e8e8;font-family:inherit;outline:none;width:100%">
+    <div style="flex:1"></div>
+    <div class="confirm-label" style="font-size:8px;color:#555;line-height:1.4">
+      Tip: pass ?backend=URL&token=TOKEN in the sideload URL to skip this screen
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-send" id="btn-setup-save" style="width:100%">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login Screen -->
+<div id="screen-login" class="screen">
+  <div class="header">
+    <div class="title">Sign In</div>
+  </div>
+  <div class="login-body">
+
+    <!-- Step 1: Phone number -->
+    <div class="login-step active" id="login-step-phone">
+      <div class="login-intro">Enter your phone number with country code to receive a login code from Telegram.</div>
+      <div class="login-field">
+        <label>Phone Number</label>
+        <input type="tel" id="login-phone" placeholder="+441234567890" autocomplete="tel">
+      </div>
+      <div class="login-error" id="login-err-phone"></div>
+      <div class="login-spacer"></div>
+      <button class="login-btn" id="login-btn-sendcode">Send Code</button>
+    </div>
+
+    <!-- Step 2: Login code -->
+    <div class="login-step" id="login-step-code">
+      <div class="login-intro">Enter the <strong>5-digit code</strong> Telegram sent to your phone.</div>
+      <div class="login-field">
+        <label>Login Code</label>
+        <input type="number" id="login-code" placeholder="12345" inputmode="numeric" maxlength="5">
+      </div>
+      <div class="login-error" id="login-err-code"></div>
+      <div class="login-spacer"></div>
+      <button class="login-btn" id="login-btn-signin">Sign In</button>
+    </div>
+
+    <!-- Step 3: 2FA password (shown only if needed) -->
+    <div class="login-step" id="login-step-2fa">
+      <div class="login-intro">This account has <strong>2-step verification</strong> enabled. Enter your cloud password.</div>
+      <div class="login-field">
+        <label>Cloud Password</label>
+        <input type="password" id="login-2fa" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="login-err-2fa"></div>
+      <div class="login-spacer"></div>
+      <button class="login-btn" id="login-btn-2fa">Verify</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Recording Overlay (floats above chat view) -->
+<div class="recording-overlay" id="recording-overlay">
+  <div class="rec-ring"><div class="rec-dot"></div></div>
+  <div class="rec-label">Recording</div>
+  <div class="rec-hint">Release PTT to stop</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCRIPT                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<script>
+
+// ─── Configuration ────────────────────────────────────────────────────
+// Priority order:
+//   1. ?backend= and ?token= URL params  (QR sideload or harness)
+//   2. localStorage (remembered from a previous visit)
+//   3. Same-origin auto-detect: if served directly from the backend
+//      (i.e. no ?backend= param and no saved URL), use window.location.origin
+//      so zero config is needed when opening http://localhost:3000/
+
+const params = new URLSearchParams(location.search);
+
+const savedUrl   = localStorage.getItem('r1tg_backend');
+const savedToken = localStorage.getItem('r1tg_token');
+
+const CONFIG = {
+  backendUrl: params.get('backend') || savedUrl || window.location.origin,
+  authToken:  params.get('token')   || savedToken || '',
+};
+
+// Persist URL params to localStorage for next visit
+if (params.get('backend')) {
+  CONFIG.backendUrl = params.get('backend');
+  localStorage.setItem('r1tg_backend', CONFIG.backendUrl);
+}
+if (params.get('token')) {
+  CONFIG.authToken = params.get('token');
+  localStorage.setItem('r1tg_token', CONFIG.authToken);
+}
+
+// ─── State ────────────────────────────────────────────────────────────
+let currentScreen = 'list';
+let chats = [];
+let selectedIdx = 0;
+let currentChatId = null;
+let currentChatName = '';
+let messages = [];
+let pendingTranscript = '';
+let isRecording = false;
+let recognition = null;
+let ws = null;
+let refreshTimer = null;
+const $  = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+const screenList    = $('#screen-list');
+const screenChat    = $('#screen-chat');
+const screenConfirm = $('#screen-confirm');
+const screenSetup   = $('#screen-setup');
+const screenLogin   = $('#screen-login');
+const chatListEl    = $('#chat-list');
+const msgsListEl    = $('#messages-list');
+const totalUnread   = $('#total-unread');
+const chatTitle     = $('#chat-title');
+const confirmText   = $('#confirm-text');
+const recOverlay    = $('#recording-overlay');
+const toastEl       = $('#toast');
+const connDot       = $('#conn-dot');
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function headers() {
+  const h = { 'Content-Type': 'application/json' };
+  if (CONFIG.authToken) h['X-Auth-Token'] = CONFIG.authToken;
+  return h;
+}
+
+async function api(path, opts = {}) {
+  const url = `${CONFIG.backendUrl}${path}`;
+  const res = await fetch(url, { headers: headers(), ...opts });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+
+function showScreen(name) {
+  currentScreen = name;
+  screenList.classList.toggle('active', name === 'list');
+  screenChat.classList.toggle('active', name === 'chat');
+  screenConfirm.classList.toggle('active', name === 'confirm');
+  screenSetup.classList.toggle('active', name === 'setup');
+  screenLogin.classList.toggle('active', name === 'login');
+}
+
+function setConnStatus(state) {
+  // state: 'ok' | 'error' | 'loading'
+  const colors = { ok: '#43a047', error: '#e53935', loading: '#f9a825' };
+  connDot.style.background = colors[state] || colors.loading;
+}
+
+function toast(msg, ms = 1800) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+
+function avatarColor(name) {
+  const colors = ['#e53935','#8e24aa','#3949ab','#00897b','#f4511e','#6d4c41','#546e7a','#d81b60'];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return colors[Math.abs(h) % colors.length];
+}
+
+function formatTime(unixSec) {
+  if (!unixSec) return '';
+  const d = new Date(unixSec * 1000);
+  const now = new Date();
+  const diffH = (now - d) / 3600000;
+  if (diffH < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffH < 168) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Chat List ────────────────────────────────────────────────────────
+async function loadChats() {
+  try {
+    const data = await api('/chats');
+    chats = data.chats || [];
+
+    // Total unread
+    const total = chats.reduce((s, c) => s + c.unread, 0);
+    if (total > 0) {
+      totalUnread.textContent = total > 99 ? '99+' : total;
+      totalUnread.style.display = '';
+    } else {
+      totalUnread.style.display = 'none';
+    }
+
+    renderChatList();
+  } catch (err) {
+    setConnStatus('error');
+    chatListEl.innerHTML = `<div class="state-msg">Could not load chats.<br>${err.message}</div>`;
+  }
+}
+
+function renderChatList() {
+  if (!chats.length) {
+    chatListEl.innerHTML = '<div class="state-msg">No chats found</div>';
+    return;
+  }
+
+  chatListEl.innerHTML = chats.map((c, i) => `
+    <div class="chat-item ${i === selectedIdx ? 'selected' : ''}" data-idx="${i}">
+      <div class="chat-avatar" style="background:${avatarColor(c.name)}">${(c.name[0] || '?').toUpperCase()}</div>
+      <div class="chat-info">
+        <div class="chat-name">${esc(c.name)}</div>
+        <div class="chat-preview">${esc(c.lastMessage)}</div>
+      </div>
+      <div class="chat-meta">
+        <div class="chat-time">${formatTime(c.lastDate)}</div>
+        ${c.unread ? `<div class="unread-badge">${c.unread > 99 ? '99+' : c.unread}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Tap handler
+  chatListEl.querySelectorAll('.chat-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      selectedIdx = parseInt(el.dataset.idx);
+      renderChatList();
+      openChat(chats[selectedIdx]);
+    });
+  });
+
+  // Scroll selected into view
+  const sel = chatListEl.querySelector('.selected');
+  if (sel) sel.scrollIntoView({ block: 'nearest' });
+}
+
+// ─── Chat View ────────────────────────────────────────────────────────
+async function openChat(chat) {
+  currentChatId = chat.id;
+  currentChatName = chat.name;
+  chatTitle.textContent = chat.name;
+  showScreen('chat');
+
+  msgsListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Loading…</div>';
+
+  try {
+    const data = await api(`/chats/${chat.id}/messages?limit=25`);
+    messages = data.messages || [];
+    renderMessages();
+
+    // Mark as read
+    api(`/chats/${chat.id}/read`, { method: 'POST' }).catch(() => {});
+  } catch (err) {
+    msgsListEl.innerHTML = `<div class="state-msg">Error loading messages</div>`;
+  }
+}
+
+function renderMessages() {
+  if (!messages.length) {
+    msgsListEl.innerHTML = '<div class="state-msg">No messages yet</div>';
+    return;
+  }
+
+  msgsListEl.innerHTML = messages.map((m) => `
+    <div class="msg-bubble ${m.out ? 'out' : 'in'}">
+      ${!m.out ? `<div class="msg-sender">${esc(m.senderName)}</div>` : ''}
+      <div>${esc(m.text)}</div>
+      <div class="msg-time">${formatTime(m.date)}</div>
+    </div>
+  `).join('');
+
+  // Scroll to bottom
+  msgsListEl.scrollTop = msgsListEl.scrollHeight;
+}
+
+// ─── Speech Recognition — Dual Mode ───────────────────────────────────
+// Mode 1: R1 native (CreationVoiceHandler) — preferred on device
+// Mode 2: Web Speech API (desktop browsers)
+// Mode 3: MediaRecorder → POST /stt (backend Whisper fallback)
+let sttMode = 'web'; // 'web', 'backend', or 'r1'
+let mediaRecorder = null;
+let audioChunks = [];
+
+// R1 dispatches sttEnded via onPluginMessage. We set this at top level so the
+// bridge can see it before any event fires.
+window.onPluginMessage = function(data) {
+  if (!data || typeof data !== 'object') return;
+
+  if (data.type === 'sttStarted' || data.type === 'sttStart' || data.type === 'recordingStarted') {
+    // Bridge confirmed recording started — keep overlay visible
+    if (!isRecording) {
+      isRecording = true;
+      recOverlay.classList.add('active');
+    }
+    return;
+  }
+
+  if (data.type === 'sttEnded') {
+    isRecording = false;
+    recOverlay.classList.remove('active');
+    const t = (data.transcript || '').trim();
+    if (t) {
+      showConfirm(t);
+    } else {
+      toast('No speech detected');
+    }
+  }
+};
+
+function initSpeechRecognition() {
+  // Prefer R1 native STT when running inside the R1 WebView
+  if (typeof CreationVoiceHandler !== 'undefined') {
+    console.log('R1 CreationVoiceHandler detected — using native STT');
+    sttMode = 'r1';
+    return null;
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    console.log('Web Speech API unavailable — using backend STT');
+    sttMode = 'backend';
+    return null;
+  }
+
+  const rec = new SR();
+  rec.continuous = true;
+  rec.interimResults = false;
+  rec.lang = 'en-US';
+  rec.maxAlternatives = 1;
+
+  rec.onresult = (e) => {
+    let transcript = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        transcript += e.results[i][0].transcript;
+      }
+    }
+    if (transcript.trim()) {
+      pendingTranscript = transcript.trim();
+    }
+  };
+
+  rec.onerror = (e) => {
+    console.warn('STT error:', e.error);
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      sttMode = 'backend';
+      toast('Mic denied — using backend STT');
+    } else if (e.error !== 'no-speech') {
+      toast('Voice error: ' + e.error);
+    }
+  };
+
+  rec.onend = () => {
+    if (isRecording) {
+      try { rec.start(); } catch (err) {}
+    }
+  };
+
+  return rec;
+}
+
+async function startMediaRecorder() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.start(250);
+  } catch (err) {
+    toast('Mic unavailable');
+    console.error('MediaRecorder error:', err);
+  }
+}
+
+async function stopMediaRecorderAndTranscribe() {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    toast('No audio captured');
+    return;
+  }
+
+  return new Promise((resolve) => {
+    mediaRecorder.onstop = async () => {
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+
+      if (audioChunks.length === 0) {
+        toast('No audio captured');
+        resolve();
+        return;
+      }
+
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      audioChunks = [];
+
+      toast('Transcribing…');
+      try {
+        const url = `${CONFIG.backendUrl}/stt`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Auth-Token': CONFIG.authToken,
+            'Content-Type': 'application/octet-stream',
+          },
+          body: blob,
+        });
+
+        if (!res.ok) throw new Error(`STT ${res.status}`);
+        const data = await res.json();
+
+        if (data.text && data.text.trim()) {
+          pendingTranscript = data.text.trim();
+        }
+      } catch (err) {
+        toast('STT failed: ' + err.message);
+        console.error('Backend STT error:', err);
+      }
+      resolve();
+    };
+
+    mediaRecorder.stop();
+  });
+}
+
+// ─── Recording Control ───────────────────────────────────────────────
+// R1 mode: handled inline in longPressStart/longPressEnd listeners below.
+// Web/backend mode: used by the on-screen PTT button and keyboard fallback.
+function startRecording() {
+  if (isRecording) return;
+  if (sttMode === 'r1') return; // R1 mode uses direct bridge calls, not this path
+  isRecording = true;
+  pendingTranscript = '';
+  recOverlay.classList.add('active');
+
+  if (sttMode === 'web') {
+    if (!recognition) recognition = initSpeechRecognition();
+    if (recognition) {
+      try { recognition.start(); } catch (err) {}
+    } else {
+      startMediaRecorder();
+    }
+  } else {
+    startMediaRecorder();
+  }
+}
+
+async function stopRecording() {
+  if (!isRecording) return;
+  if (sttMode === 'r1') return; // R1 mode handled by onPluginMessage
+  isRecording = false;
+  recOverlay.classList.remove('active');
+
+  if (sttMode === 'web' && recognition) {
+    try { recognition.stop(); } catch (err) {}
+    await new Promise(r => setTimeout(r, 400));
+  } else {
+    await stopMediaRecorderAndTranscribe();
+  }
+
+  if (pendingTranscript) {
+    showConfirm(pendingTranscript);
+  } else {
+    toast('No speech detected');
+  }
+}
+
+// ─── Confirm & Send ───────────────────────────────────────────────────
+function showConfirm(text) {
+  confirmText.textContent = text;
+  showScreen('confirm');
+}
+
+async function sendMessage() {
+  const text = confirmText.textContent;
+  if (!text || !currentChatId) return;
+
+  toast('Sending…');
+  showScreen('chat');
+
+  try {
+    await api(`/chats/${currentChatId}/send`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+
+    messages.push({
+      id: Date.now(),
+      text,
+      date: Math.floor(Date.now() / 1000),
+      out: true,
+      senderName: 'You',
+    });
+    renderMessages();
+    toast('Sent ✓');
+  } catch (err) {
+    toast('Send failed');
+  }
+}
+
+// ─── WebSocket (live updates) ─────────────────────────────────────────
+function connectWS() {
+  if (!CONFIG.backendUrl) return;
+
+  const wsUrl = CONFIG.backendUrl.replace(/^http/, 'ws') + '/ws?token=' + encodeURIComponent(CONFIG.authToken);
+
+  try {
+    ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'new_message') {
+          handleLiveMessage(data);
+        }
+      } catch (err) {}
+    };
+
+    ws.onclose = () => {
+      setTimeout(connectWS, 5000);
+    };
+
+    ws.onerror = () => {
+      if (ws) ws.close();
+    };
+  } catch (err) {
+    setTimeout(connectWS, 5000);
+  }
+}
+
+function handleLiveMessage(data) {
+  if (currentScreen === 'chat' && data.chatId === currentChatId) {
+    messages.push(data.message);
+    renderMessages();
+  }
+
+  if (currentScreen === 'list') {
+    loadChats();
+  }
+}
+
+// ─── Input Handlers ───────────────────────────────────────────────────
+function handleScroll(direction) {
+  if (currentScreen === 'list') {
+    if (direction === 'up' && selectedIdx > 0) selectedIdx--;
+    if (direction === 'down' && selectedIdx < chats.length - 1) selectedIdx++;
+    renderChatList();
+  } else if (currentScreen === 'chat') {
+    const delta = direction === 'up' ? -40 : 40;
+    msgsListEl.scrollBy({ top: delta, behavior: 'smooth' });
+  } else if (currentScreen === 'confirm') {
+    const cancelBtn = $('#btn-discard');
+    const sendBtn = $('#btn-confirm-send');
+    if (direction === 'up' || direction === 'down') {
+      if (document.activeElement === sendBtn) {
+        cancelBtn.focus();
+      } else {
+        sendBtn.focus();
+      }
+    }
+  }
+}
+
+function handleSelect() {
+  if (currentScreen === 'list' && chats[selectedIdx]) {
+    openChat(chats[selectedIdx]);
+  } else if (currentScreen === 'confirm') {
+    sendMessage();
+  }
+}
+
+function handleBack() {
+  if (currentScreen === 'chat') {
+    showScreen('list');
+    currentChatId = null;
+    loadChats();
+  } else if (currentScreen === 'confirm') {
+    showScreen('chat');
+  }
+}
+
+// ─── R1 Hardware Events ───────────────────────────────────────────────
+// Documented R1 pattern: the native bridge dispatches CustomEvents on window.
+//   longPressStart / longPressEnd  → hold-to-record
+//   sideClick                      → short tap (navigation)
+//   scrollUp / scrollDown          → scroll wheel
+// Transcripts come back via window.onPluginMessage (wired above).
+
+window.addEventListener('longPressStart', () => {
+  // Only record from chat screen
+  if (currentScreen !== 'chat' || isRecording) return;
+
+  if (typeof CreationVoiceHandler !== 'undefined') {
+    // R1 native path
+    isRecording = true;
+    recOverlay.classList.add('active');
+    CreationVoiceHandler.postMessage('start');
+  } else {
+    // Desktop / keyboard-fallback path
+    startRecording();
+  }
+});
+
+window.addEventListener('longPressEnd', () => {
+  if (!isRecording) return;
+
+  if (typeof CreationVoiceHandler !== 'undefined') {
+    // R1 native path — transcript arrives asynchronously via onPluginMessage.
+    // Keep isRecording=true; onPluginMessage's sttEnded branch will clear it
+    // and hide the overlay.
+    CreationVoiceHandler.postMessage('stop');
+  } else {
+    stopRecording();
+  }
+});
+
+window.addEventListener('sideClick', () => {
+  // Short tap: navigation only, never STT.
+  if (currentScreen === 'list') {
+    handleSelect();
+  } else if (currentScreen === 'confirm') {
+    handleSelect();
+  }
+  // On chat screen: intentionally do nothing — hold the button for STT.
+});
+
+window.addEventListener('scrollUp',   () => handleScroll('down'));
+window.addEventListener('scrollDown', () => handleScroll('up'));
+
+// ─── Keyboard Fallback (desktop testing) ──────────────────────────────
+// Translates keyboard input into the same window events the R1 bridge dispatches,
+// so the hardware handlers above are the single source of truth.
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.key === ' ')              { e.preventDefault(); window.dispatchEvent(new Event('longPressStart')); }
+  else if (e.key === 'Escape')    { window.dispatchEvent(new Event('sideClick')); }
+  else if (e.key === 'ArrowUp')   { window.dispatchEvent(new Event('scrollUp')); }
+  else if (e.key === 'ArrowDown') { window.dispatchEvent(new Event('scrollDown')); }
+  else if (e.key === 'Enter')     { handleSelect(); }
+  else if (e.key === 'Backspace') { handleBack(); }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    window.dispatchEvent(new Event('longPressEnd'));
+  }
+});
+
+// ─── On-screen PTT Button ─────────────────────────────────────────────
+const pttBtn = $('#ptt-btn');
+
+function pttTouchStart() {
+  pttBtn.style.background = '#e53935';
+  pttBtn.style.color = '#fff';
+  pttBtn.textContent = '🔴 RECORDING…';
+  // Route through the same event path as the physical button
+  window.dispatchEvent(new Event('longPressStart'));
+}
+
+function pttTouchEnd() {
+  pttBtn.style.background = '#1a1a1a';
+  pttBtn.style.color = '#2aabee';
+  pttBtn.textContent = '🎙 HOLD TO SPEAK';
+  window.dispatchEvent(new Event('longPressEnd'));
+}
+
+// Use pointer events — touchstart + preventDefault crashes R1 WebView after ~3s
+pttBtn.addEventListener('pointerdown',  pttTouchStart);
+pttBtn.addEventListener('pointerup',    pttTouchEnd);
+pttBtn.addEventListener('pointercancel',pttTouchEnd);
+pttBtn.addEventListener('pointerleave', pttTouchEnd);
+
+// ─── Button Event Listeners ───────────────────────────────────────────
+$('#btn-back').addEventListener('click', handleBack);
+$('#btn-discard').addEventListener('click', () => showScreen('chat'));
+$('#btn-confirm-send').addEventListener('click', sendMessage);
+
+// Setup screen save button
+$('#btn-setup-save').addEventListener('click', () => {
+  const url   = $('#setup-url').value.trim().replace(/\/+$/, '');
+  const token = $('#setup-token').value.trim();
+  if (!url) { toast('Enter a URL'); return; }
+  CONFIG.backendUrl = url;
+  CONFIG.authToken = token;
+  localStorage.setItem('r1tg_backend', url);
+  localStorage.setItem('r1tg_token', token);
+  startApp();
+});
+
+// ─── Login Flow ───────────────────────────────────────────────────────
+function loginShowStep(step) {
+  // step: 'phone' | 'code' | '2fa'
+  ['phone', 'code', '2fa'].forEach((s) => {
+    $('#login-step-' + s).classList.toggle('active', s === step);
+  });
+}
+
+function loginSetError(step, msg) {
+  $('#login-err-' + step).textContent = msg || '';
+}
+
+function loginSetBusy(btnId, busy) {
+  const btn = $('#' + btnId);
+  btn.disabled = busy;
+  btn.textContent = busy ? 'Please wait…' : btn.dataset.label;
+}
+
+// Store the label so we can restore it after busy state
+['login-btn-sendcode', 'login-btn-signin', 'login-btn-2fa'].forEach((id) => {
+  const btn = $('#' + id);
+  btn.dataset.label = btn.textContent;
+});
+
+// Step 1 — send code
+$('#login-btn-sendcode').addEventListener('click', async () => {
+  const phone = $('#login-phone').value.trim();
+  if (!phone) { loginSetError('phone', 'Enter your phone number.'); return; }
+  loginSetError('phone', '');
+  loginSetBusy('login-btn-sendcode', true);
+  try {
+    const url = `${CONFIG.backendUrl}/auth/send-code`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    loginShowStep('code');
+    setTimeout(() => $('#login-code').focus(), 50);
+  } catch (err) {
+    loginSetError('phone', err.message);
+  } finally {
+    loginSetBusy('login-btn-sendcode', false);
+  }
+});
+
+// Step 2 — sign in with code
+$('#login-btn-signin').addEventListener('click', async () => {
+  const code = $('#login-code').value.trim();
+  if (!code) { loginSetError('code', 'Enter the code from Telegram.'); return; }
+  loginSetError('code', '');
+  loginSetBusy('login-btn-signin', true);
+  try {
+    const url = `${CONFIG.backendUrl}/auth/sign-in`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    if (data.needs2fa) {
+      loginShowStep('2fa');
+      setTimeout(() => $('#login-2fa').focus(), 50);
+    } else {
+      await onLoginSuccess();
+    }
+  } catch (err) {
+    loginSetError('code', err.message);
+  } finally {
+    loginSetBusy('login-btn-signin', false);
+  }
+});
+
+// Step 3 — 2FA password
+$('#login-btn-2fa').addEventListener('click', async () => {
+  const password = $('#login-2fa').value;
+  if (!password) { loginSetError('2fa', 'Enter your cloud password.'); return; }
+  loginSetError('2fa', '');
+  loginSetBusy('login-btn-2fa', true);
+  try {
+    const url = `${CONFIG.backendUrl}/auth/check-password`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    await onLoginSuccess();
+  } catch (err) {
+    loginSetError('2fa', err.message);
+    $('#login-2fa').value = '';
+  } finally {
+    loginSetBusy('login-btn-2fa', false);
+  }
+});
+
+async function onLoginSuccess() {
+  toast('Logged in ✓');
+  loginShowStep('phone');
+  // Clear inputs for next time
+  ['#login-phone', '#login-code', '#login-2fa'].forEach((s) => { $(s).value = ''; });
+  await loadChatsAndConnect();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────
+async function loadChatsAndConnect() {
+  showScreen('list');
+  chatListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Loading…</div>';
+  await loadChats();
+  setConnStatus('ok');
+  connectWS();
+  if (!refreshTimer) {
+    refreshTimer = setInterval(() => {
+      if (currentScreen === 'list') loadChats();
+    }, 30000);
+  }
+}
+
+async function startApp() {
+  showScreen('list');
+  chatListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Connecting…</div>';
+  setConnStatus('loading');
+
+  // Detect STT mode (sets sttMode = 'r1' when CreationVoiceHandler present)
+  initSpeechRecognition();
+  console.log('R1 hardware controls: sttMode =', sttMode);
+
+  // Test backend connectivity
+  let health;
+  try {
+    health = await api('/health');
+  } catch (err) {
+    setConnStatus('error');
+    chatListEl.innerHTML = `<div class="state-msg">Backend unreachable<br><span style="font-size:8px;color:#555">${esc(CONFIG.backendUrl)}</span></div>`;
+    return;
+  }
+
+  if (!health.ok) {
+    setConnStatus('error');
+    chatListEl.innerHTML = '<div class="state-msg">Backend error</div>';
+    return;
+  }
+
+  setConnStatus('loading');
+
+  // Check whether a Telegram session is already active
+  let status;
+  try {
+    const res = await fetch(`${CONFIG.backendUrl}/auth/status`, { headers: headers() });
+    if (!res.ok) throw new Error(`${res.status}`);
+    status = await res.json();
+  } catch (err) {
+    setConnStatus('error');
+    chatListEl.innerHTML = `<div class="state-msg">Auth check failed<br>${esc(err.message)}</div>`;
+    return;
+  }
+
+  if (status.loggedIn) {
+    // Already authenticated — go straight to chat list
+    await loadChatsAndConnect();
+  } else {
+    // Not logged in — show the login screen
+    setConnStatus('error');
+    loginShowStep('phone');
+    showScreen('login');
+    setTimeout(() => $('#login-phone').focus(), 50);
+  }
+}
+
+// Decide: show setup screen or go straight to app.
+(async () => {
+  const isFileProtocol = location.protocol === 'file:';
+  const hasNoConfig    = !CONFIG.backendUrl || CONFIG.backendUrl === 'null';
+  if (isFileProtocol && hasNoConfig) {
+    showScreen('setup');
+  } else {
+    await startApp();
+  }
+})();
+
+
+</script>
+</body>
+</html>
