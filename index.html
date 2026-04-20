@@ -213,6 +213,14 @@
     margin-top: 1px;
   }
 
+  .msg-bubble ul { margin: 2px 0 2px 10px; padding: 0; }
+  .msg-bubble li { margin: 1px 0; list-style: disc; }
+  .msg-bubble code { background: rgba(255,255,255,0.12); border-radius: 2px; padding: 0 2px; font-family: monospace; font-size: 9px; }
+  .msg-bubble pre { background: rgba(255,255,255,0.08); border-radius: 3px; padding: 3px 4px; margin: 2px 0; overflow-x: auto; white-space: pre-wrap; }
+  .msg-bubble pre code { background: none; padding: 0; }
+  .msg-bubble strong { font-weight: 700; }
+  .msg-bubble em { font-style: italic; }
+
   /* ─── Status Bar (bottom) ─────────────────────────────────────── */
   .status-bar {
     height: 22px;
@@ -690,6 +698,36 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function mdToHtml(text) {
+  if (!text) return '';
+  // Escape HTML first (XSS safety)
+  let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Fenced code blocks
+  s = s.replace(/```([\s\S]*?)```/g, (_, c) => '<pre><code>' + c.trim() + '</code></pre>');
+  // Inline code
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  // Bold
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  // Process lines — handle bullet lists and line breaks
+  const lines = s.split('\n');
+  let out = '';
+  let inList = false;
+  for (const line of lines) {
+    const li = line.match(/^[\-\*]\s+(.+)/);
+    if (li) {
+      if (!inList) { out += '<ul>'; inList = true; }
+      out += '<li>' + li[1] + '</li>';
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      if (out && !out.endsWith('<br>') && !out.endsWith('</ul>') && !out.endsWith('</pre>')) out += '<br>';
+      out += line;
+    }
+  }
+  if (inList) out += '</ul>';
+  return out;
+}
+
+
 // ─── Chat List ────────────────────────────────────────────────────────
 async function loadChats() {
   try {
@@ -776,7 +814,7 @@ function renderMessages() {
   msgsListEl.innerHTML = messages.map((m) => `
     <div class="msg-bubble ${m.out ? 'out' : 'in'}">
       ${!m.out ? `<div class="msg-sender">${esc(m.senderName)}</div>` : ''}
-      <div>${esc(m.text)}</div>
+      <div>${mdToHtml(m.text)}</div>
       <div class="msg-time">${formatTime(m.date)}</div>
     </div>
   `).join('');
