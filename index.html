@@ -88,6 +88,17 @@
   }
 
   /* ─── Chat List ───────────────────────────────────────────────── */
+  .header .btn-read-all {
+    margin-left: auto;
+    font-size: 10px;
+    color: #4fc3f7;
+    background: none;
+    border: 1px solid #4fc3f7;
+    border-radius: 3px;
+    padding: 1px 4px;
+    cursor: pointer;
+    display: none;
+  }
   .chat-list {
     flex: 1;
     overflow-y: auto;
@@ -351,78 +362,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ─── Login Screen ───────────────────────────────────────────────── */
-  .login-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 10px 10px 8px;
-    gap: 8px;
-    overflow: hidden;
-  }
-  .login-step {
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-    flex: 1;
-  }
-  .login-step.active { display: flex; }
-
-  .login-intro {
-    font-size: 9px;
-    color: var(--text-dim);
-    line-height: 1.5;
-  }
-  .login-intro strong { color: var(--accent); font-weight: 600; }
-
-  .login-field {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .login-field label {
-    font-size: 8px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .login-field input {
-    background: var(--surface);
-    border: 1px solid #2a2a2a;
-    border-radius: 5px;
-    padding: 7px 8px;
-    font-size: 11px;
-    color: var(--text);
-    font-family: var(--font);
-    outline: none;
-    width: 100%;
-    -webkit-appearance: none;
-  }
-  .login-field input:focus { border-color: var(--accent-dim); }
-  .login-field input::placeholder { color: #444; }
-
-  .login-error {
-    font-size: 9px;
-    color: var(--danger);
-    min-height: 12px;
-    line-height: 1.4;
-  }
-  .login-spacer { flex: 1; }
-
-  .login-btn {
-    height: 30px;
-    border: none;
-    border-radius: 6px;
-    background: var(--accent);
-    color: #fff;
-    font-family: var(--font);
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-  }
-  .login-btn:disabled { opacity: 0.5; cursor: default; }
-
   /* ─── Toast ───────────────────────────────────────────────────── */
   .toast {
     position: absolute;
@@ -457,6 +396,7 @@
     <div class="title">Telegram</div>
     <div id="conn-dot" style="width:6px;height:6px;border-radius:50%;background:#f9a825" title="connecting"></div>
     <div class="badge-total" id="total-unread" style="display:none">0</div>
+    <button class="btn-read-all" id="btn-read-all" title="Mark all read">✓</button>
   </div>
   <div class="chat-list" id="chat-list"></div>
   <div class="status-bar">
@@ -472,6 +412,7 @@
   <div class="header">
     <div class="back" id="btn-back">‹</div>
     <div class="title" id="chat-title">Chat</div>
+    <div id="btn-tts" style="font-size:14px;cursor:pointer;padding:2px 4px;opacity:0.5;" title="Toggle TTS">🔇</div>
   </div>
   <div class="messages-list" id="messages-list"></div>
   <div id="ptt-btn" style="
@@ -520,52 +461,6 @@
     <div class="confirm-actions">
       <button class="btn-send" id="btn-setup-save" style="width:100%">Connect</button>
     </div>
-  </div>
-</div>
-
-<!-- Login Screen -->
-<div id="screen-login" class="screen">
-  <div class="header">
-    <div class="title">Sign In</div>
-  </div>
-  <div class="login-body">
-
-    <!-- Step 1: Phone number -->
-    <div class="login-step active" id="login-step-phone">
-      <div class="login-intro">Enter your phone number with country code to receive a login code from Telegram.</div>
-      <div class="login-field">
-        <label>Phone Number</label>
-        <input type="tel" id="login-phone" placeholder="+441234567890" autocomplete="tel">
-      </div>
-      <div class="login-error" id="login-err-phone"></div>
-      <div class="login-spacer"></div>
-      <button class="login-btn" id="login-btn-sendcode">Send Code</button>
-    </div>
-
-    <!-- Step 2: Login code -->
-    <div class="login-step" id="login-step-code">
-      <div class="login-intro">Enter the <strong>5-digit code</strong> Telegram sent to your phone.</div>
-      <div class="login-field">
-        <label>Login Code</label>
-        <input type="number" id="login-code" placeholder="12345" inputmode="numeric" maxlength="5">
-      </div>
-      <div class="login-error" id="login-err-code"></div>
-      <div class="login-spacer"></div>
-      <button class="login-btn" id="login-btn-signin">Sign In</button>
-    </div>
-
-    <!-- Step 3: 2FA password (shown only if needed) -->
-    <div class="login-step" id="login-step-2fa">
-      <div class="login-intro">This account has <strong>2-step verification</strong> enabled. Enter your cloud password.</div>
-      <div class="login-field">
-        <label>Cloud Password</label>
-        <input type="password" id="login-2fa" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <div class="login-error" id="login-err-2fa"></div>
-      <div class="login-spacer"></div>
-      <button class="login-btn" id="login-btn-2fa">Verify</button>
-    </div>
-
   </div>
 </div>
 
@@ -631,7 +526,6 @@ const screenList    = $('#screen-list');
 const screenChat    = $('#screen-chat');
 const screenConfirm = $('#screen-confirm');
 const screenSetup   = $('#screen-setup');
-const screenLogin   = $('#screen-login');
 const chatListEl    = $('#chat-list');
 const msgsListEl    = $('#messages-list');
 const totalUnread   = $('#total-unread');
@@ -661,7 +555,6 @@ function showScreen(name) {
   screenChat.classList.toggle('active', name === 'chat');
   screenConfirm.classList.toggle('active', name === 'confirm');
   screenSetup.classList.toggle('active', name === 'setup');
-  screenLogin.classList.toggle('active', name === 'login');
 }
 
 function setConnStatus(state) {
@@ -739,8 +632,10 @@ async function loadChats() {
     if (total > 0) {
       totalUnread.textContent = total > 99 ? '99+' : total;
       totalUnread.style.display = '';
+      $('#btn-read-all').style.display = '';
     } else {
       totalUnread.style.display = 'none';
+      $('#btn-read-all').style.display = 'none';
     }
 
     renderChatList();
@@ -1077,10 +972,60 @@ function connectWS() {
   }
 }
 
+// ─── TTS Module ───────────────────────────────────────────────────────
+let ttsEnabled = false;
+let ttsAudio = null;
+
+function speak(text) {
+  if (!ttsEnabled || !text?.trim()) return;
+
+  // Path 1: R1 native speaker via PluginMessageHandler
+  if (typeof PluginMessageHandler !== 'undefined') {
+    PluginMessageHandler.postMessage(JSON.stringify({
+      message: text,
+      useLLM: false,
+      wantsR1Response: true,
+    }));
+    return;
+  }
+
+  // Path 2: Server-side TTS (OpenAI) → HTML5 audio
+  (async () => {
+    try {
+      if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
+      const url = `${CONFIG.backendUrl}/tts`;
+      const hdrs = { 'Content-Type': 'application/json' };
+      if (CONFIG.authToken) hdrs['x-auth-token'] = CONFIG.authToken;
+      const r = await fetch(url, { method: 'POST', headers: hdrs, body: JSON.stringify({ text }) });
+      if (!r.ok) throw new Error('TTS failed');
+      const blob = await r.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      ttsAudio = new Audio(audioUrl);
+      ttsAudio.play();
+      ttsAudio.onended = () => { URL.revokeObjectURL(audioUrl); ttsAudio = null; };
+    } catch {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+      }
+    }
+  })();
+}
+
+
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = $('#btn-tts');
+  btn.textContent = ttsEnabled ? '🔊' : '🔇';
+  btn.style.opacity = ttsEnabled ? '1' : '0.5';
+  if (!ttsEnabled) { ttsAudio?.pause(); ttsAudio = null; window.speechSynthesis?.cancel(); }
+}
+
 function handleLiveMessage(data) {
   if (currentScreen === 'chat' && data.chatId === currentChatId) {
     messages.push(data.message);
     renderMessages();
+    if (!data.message.out) speak(data.message.text);
   }
 
   if (currentScreen === 'list') {
@@ -1221,6 +1166,11 @@ pttBtn.addEventListener('pointerleave', pttTouchEnd);
 
 // ─── Button Event Listeners ───────────────────────────────────────────
 $('#btn-back').addEventListener('click', handleBack);
+$('#btn-read-all').addEventListener('click', async () => {
+  await api('/chats/read-all', { method: 'POST' });
+  loadChats();
+});
+$('#btn-tts').addEventListener('click', toggleTTS);
 $('#btn-discard').addEventListener('click', () => showScreen('chat'));
 $('#btn-confirm-send').addEventListener('click', sendMessage);
 
@@ -1236,128 +1186,7 @@ $('#btn-setup-save').addEventListener('click', () => {
   startApp();
 });
 
-// ─── Login Flow ───────────────────────────────────────────────────────
-function loginShowStep(step) {
-  // step: 'phone' | 'code' | '2fa'
-  ['phone', 'code', '2fa'].forEach((s) => {
-    $('#login-step-' + s).classList.toggle('active', s === step);
-  });
-}
-
-function loginSetError(step, msg) {
-  $('#login-err-' + step).textContent = msg || '';
-}
-
-function loginSetBusy(btnId, busy) {
-  const btn = $('#' + btnId);
-  btn.disabled = busy;
-  btn.textContent = busy ? 'Please wait…' : btn.dataset.label;
-}
-
-// Store the label so we can restore it after busy state
-['login-btn-sendcode', 'login-btn-signin', 'login-btn-2fa'].forEach((id) => {
-  const btn = $('#' + id);
-  btn.dataset.label = btn.textContent;
-});
-
-// Step 1 — send code
-$('#login-btn-sendcode').addEventListener('click', async () => {
-  const phone = $('#login-phone').value.trim();
-  if (!phone) { loginSetError('phone', 'Enter your phone number.'); return; }
-  loginSetError('phone', '');
-  loginSetBusy('login-btn-sendcode', true);
-  try {
-    const url = `${CONFIG.backendUrl}/auth/send-code`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ phone }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-    loginShowStep('code');
-    setTimeout(() => $('#login-code').focus(), 50);
-  } catch (err) {
-    loginSetError('phone', err.message);
-  } finally {
-    loginSetBusy('login-btn-sendcode', false);
-  }
-});
-
-// Step 2 — sign in with code
-$('#login-btn-signin').addEventListener('click', async () => {
-  const code = $('#login-code').value.trim();
-  if (!code) { loginSetError('code', 'Enter the code from Telegram.'); return; }
-  loginSetError('code', '');
-  loginSetBusy('login-btn-signin', true);
-  try {
-    const url = `${CONFIG.backendUrl}/auth/sign-in`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ code }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-    if (data.needs2fa) {
-      loginShowStep('2fa');
-      setTimeout(() => $('#login-2fa').focus(), 50);
-    } else {
-      await onLoginSuccess();
-    }
-  } catch (err) {
-    loginSetError('code', err.message);
-  } finally {
-    loginSetBusy('login-btn-signin', false);
-  }
-});
-
-// Step 3 — 2FA password
-$('#login-btn-2fa').addEventListener('click', async () => {
-  const password = $('#login-2fa').value;
-  if (!password) { loginSetError('2fa', 'Enter your cloud password.'); return; }
-  loginSetError('2fa', '');
-  loginSetBusy('login-btn-2fa', true);
-  try {
-    const url = `${CONFIG.backendUrl}/auth/check-password`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-    await onLoginSuccess();
-  } catch (err) {
-    loginSetError('2fa', err.message);
-    $('#login-2fa').value = '';
-  } finally {
-    loginSetBusy('login-btn-2fa', false);
-  }
-});
-
-async function onLoginSuccess() {
-  toast('Logged in ✓');
-  loginShowStep('phone');
-  // Clear inputs for next time
-  ['#login-phone', '#login-code', '#login-2fa'].forEach((s) => { $(s).value = ''; });
-  await loadChatsAndConnect();
-}
-
 // ─── Init ─────────────────────────────────────────────────────────────
-async function loadChatsAndConnect() {
-  showScreen('list');
-  chatListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Loading…</div>';
-  await loadChats();
-  setConnStatus('ok');
-  connectWS();
-  if (!refreshTimer) {
-    refreshTimer = setInterval(() => {
-      if (currentScreen === 'list') loadChats();
-    }, 30000);
-  }
-}
-
 async function startApp() {
   showScreen('list');
   chatListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Connecting…</div>';
@@ -1367,46 +1196,32 @@ async function startApp() {
   initSpeechRecognition();
   console.log('R1 hardware controls: sttMode =', sttMode);
 
-  // Test backend connectivity
-  let health;
+  // Test backend health
   try {
-    health = await api('/health');
+    const health = await api('/health');
+    if (health.ok && health.telegram) {
+      setConnStatus('ok');
+    } else {
+      setConnStatus('loading');
+      toast('Telegram connecting…');
+    }
   } catch (err) {
     setConnStatus('error');
     chatListEl.innerHTML = `<div class="state-msg">Backend unreachable<br><span style="font-size:8px;color:#555">${esc(CONFIG.backendUrl)}</span></div>`;
     return;
   }
 
-  if (!health.ok) {
-    setConnStatus('error');
-    chatListEl.innerHTML = '<div class="state-msg">Backend error</div>';
-    return;
-  }
+  // Load chats
+  await loadChats();
+  setConnStatus('ok');
 
-  setConnStatus('loading');
+  // Connect WebSocket for live updates
+  connectWS();
 
-  // Check whether a Telegram session is already active
-  let status;
-  try {
-    const res = await fetch(`${CONFIG.backendUrl}/auth/status`, { headers: headers() });
-    if (!res.ok) throw new Error(`${res.status}`);
-    status = await res.json();
-  } catch (err) {
-    setConnStatus('error');
-    chatListEl.innerHTML = `<div class="state-msg">Auth check failed<br>${esc(err.message)}</div>`;
-    return;
-  }
-
-  if (status.loggedIn) {
-    // Already authenticated — go straight to chat list
-    await loadChatsAndConnect();
-  } else {
-    // Not logged in — show the login screen
-    setConnStatus('error');
-    loginShowStep('phone');
-    showScreen('login');
-    setTimeout(() => $('#login-phone').focus(), 50);
-  }
+  // Periodic refresh (every 30s when on chat list)
+  refreshTimer = setInterval(() => {
+    if (currentScreen === 'list') loadChats();
+  }, 30000);
 }
 
 // Decide: show setup screen or go straight to app.
@@ -1419,7 +1234,6 @@ async function startApp() {
     await startApp();
   }
 })();
-
 
 </script>
 </body>
