@@ -88,22 +88,16 @@
   }
 
   /* ─── Chat List ───────────────────────────────────────────────── */
-  .read-all-bar {
-    display: none;
-    padding: 4px 8px;
-    background: var(--surface);
-    border-bottom: 1px solid #2a2a2a;
-  }
   .btn-read-all {
-    width: 100%;
-    font-size: 11px;
+    font-size: 10px;
     color: #4fc3f7;
     background: none;
     border: 1px solid #4fc3f7;
-    border-radius: 4px;
-    padding: 3px 0;
+    border-radius: 3px;
+    padding: 1px 6px;
     cursor: pointer;
-    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .chat-list {
     flex: 1;
@@ -402,9 +396,7 @@
     <div class="title">Telegram</div>
     <div id="conn-dot" style="width:6px;height:6px;border-radius:50%;background:#f9a825" title="connecting"></div>
     <div class="badge-total" id="total-unread" style="display:none">0</div>
-  </div>
-  <div class="read-all-bar" id="read-all-bar">
-    <button class="btn-read-all" id="btn-read-all">✓ Mark all read</button>
+    <button class="btn-read-all" id="btn-read-all" style="display:none">✓ read</button>
   </div>
   <div class="chat-list" id="chat-list"></div>
   <div class="status-bar">
@@ -640,10 +632,10 @@ async function loadChats() {
     if (total > 0) {
       totalUnread.textContent = total > 99 ? '99+' : total;
       totalUnread.style.display = '';
-      $('#read-all-bar').style.display = '';
+      $('#btn-read-all').style.display = 'inline-block';
     } else {
       totalUnread.style.display = 'none';
-      $('#read-all-bar').style.display = 'none';
+      $('#btn-read-all').style.display = 'none';
     }
 
     renderChatList();
