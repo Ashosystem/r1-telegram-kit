@@ -1,0 +1,22 @@
+{
+  "name": "r1-telegram-backend",
+  "version": "1.0.0",
+  "description": "Backend for R1 Telegram Voice Creation — manages Telegram session and exposes REST/WebSocket API",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "setup": "node setup-auth.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "telegram": "^2.26.8",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

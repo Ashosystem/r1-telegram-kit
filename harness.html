@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R1 Telegram — Dev Harness</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:       #0a0a0f;
+    --panel:    #12121a;
+    --border:   #1e1e2e;
+    --accent:   #2aabee;
+    --accent2:  #5c6bc0;
+    --text:     #cdd6f4;
+    --dim:      #585b70;
+    --green:    #a6e3a1;
+    --red:      #f38ba8;
+    --yellow:   #f9e2af;
+    --orange:   #fab387;
+    --surface:  #1e1e2e;
+    --font:     'SF Mono', 'Menlo', 'Consolas', monospace;
+    --sans:     -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    gap: 20px;
+  }
+
+  /* ── Header ── */
+  .harness-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 900px;
+  }
+  .harness-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .harness-title span { color: var(--accent); }
+  .harness-subtitle {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  .pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .pill.live { color: var(--green); border-color: rgba(166,227,161,0.3); background: rgba(166,227,161,0.06); }
+
+  /* ── Main Layout ── */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 260px 240px 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+    align-items: start;
+  }
+
+  /* ── Panels ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Config Panel ── */
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  input[type="text"], input[type="url"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="url"]:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: var(--sans);
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn.danger { background: rgba(243,139,168,0.15); color: var(--red); border: 1px solid rgba(243,139,168,0.3); }
+
+  /* Connection status */
+  .conn-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border-radius: 6px;
+    font-size: 11px;
+  }
+  .conn-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .conn-dot.ok     { background: var(--green); }
+  .conn-dot.error  { background: var(--red); }
+  .conn-dot.loading { background: var(--yellow); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  /* ── Device Frame ── */
+  .device-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+  .device-frame {
+    position: relative;
+    width: 272px;
+    background: #1a1a1a;
+    border-radius: 18px;
+    border: 2px solid #333;
+    box-shadow: 0 0 0 1px #111, 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    padding: 14px 14px 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Side button (PTT) */
+  .side-btn {
+    position: absolute;
+    right: -10px;
+    top: 50px;
+    width: 8px;
+    height: 44px;
+    background: #2a2a2a;
+    border-radius: 0 4px 4px 0;
+    border: 1px solid #444;
+    border-left: none;
+    cursor: pointer;
+    transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .side-btn:active, .side-btn.pressed { background: var(--accent); }
+  .side-btn-label {
+    writing-mode: vertical-rl;
+    font-size: 6px;
+    color: #555;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  /* Screen window */
+  .screen-bezel {
+    width: 240px;
+    height: 282px;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #222;
+  }
+  .screen-bezel iframe {
+    width: 240px;
+    height: 282px;
+    border: none;
+    display: block;
+  }
+
+  /* Scroll wheel */
+  .scroll-wheel-area {
+    width: 56px;
+    height: 56px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    border: 2px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .scroll-inner {
+    width: 24px;
+    height: 24px;
+    background: #252525;
+    border-radius: 50%;
+    border: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  /* Scroll buttons row */
+  .hw-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hw-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+  }
+  .hw-btn:hover { background: #252535; border-color: var(--accent2); }
+  .hw-btn:active { background: var(--accent2); }
+
+  .ptt-btn {
+    background: rgba(243,139,168,0.08);
+    border: 1px solid rgba(243,139,168,0.25);
+    border-radius: 8px;
+    color: var(--red);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 16px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.1s;
+    user-select: none;
+  }
+  .ptt-btn:hover { background: rgba(243,139,168,0.14); }
+  .ptt-btn.held {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 0 16px rgba(243,139,168,0.4);
+  }
+
+  /* Keyboard hint */
+  .kbd-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+  }
+  .kbd {
+    background: var(--surface);
+    border: 1px solid #2a2a3a;
+    border-bottom: 2px solid #2a2a3a;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: var(--font);
+    font-size: 9px;
+    color: var(--dim);
+  }
+  .kbd-sep { color: var(--dim); font-size: 9px; display: flex; align-items: center; }
+
+  /* ── Log Panel ── */
+  .log-panel { height: 480px; display: flex; flex-direction: column; }
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    font-family: var(--font);
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .log-body::-webkit-scrollbar { width: 4px; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    display: flex;
+    gap: 8px;
+    line-height: 1.5;
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+  .log-entry:hover { background: rgba(255,255,255,0.03); }
+  .log-time { color: var(--dim); flex-shrink: 0; }
+  .log-tag {
+    flex-shrink: 0;
+    font-weight: 700;
+    min-width: 48px;
+  }
+  .log-tag.hw   { color: var(--accent); }
+  .log-tag.net  { color: var(--green); }
+  .log-tag.ws   { color: var(--orange); }
+  .log-tag.err  { color: var(--red); }
+  .log-tag.info { color: var(--dim); }
+  .log-msg { color: var(--text); word-break: break-all; }
+
+  .log-footer {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Status row */
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .status-cell {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 7px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .status-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.4px; }
+  .status-val { font-size: 11px; font-weight: 600; color: var(--text); font-family: var(--font); }
+
+  /* Quick send */
+  .quick-send {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .quick-send textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    min-height: 48px;
+    transition: border-color 0.15s;
+  }
+  .quick-send textarea:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="harness-header">
+  <div>
+    <div class="harness-title">R1 Telegram <span>Dev Harness</span></div>
+    <div class="harness-subtitle">Simulates R1 hardware events · 240×282px viewport</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <span class="pill" id="tg-status-pill">Telegram: –</span>
+    <span class="pill live" id="ws-status-pill">WS: –</span>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main-layout">
+
+  <!-- Left: Config -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- Connection -->
+    <div class="panel">
+      <div class="panel-header">
+        Connection
+        <span id="overall-pill" class="pill">Disconnected</span>
+      </div>
+      <div class="panel-body">
+        <label>Backend URL
+          <input type="url" id="cfg-url" placeholder="https://your-backend.example.com" spellcheck="false">
+        </label>
+        <label>Auth Token
+          <input type="text" id="cfg-token" placeholder="your-secret-token" spellcheck="false">
+        </label>
+        <button class="btn" id="btn-connect">Connect &amp; Load</button>
+        <div class="conn-row">
+          <div class="conn-dot" id="conn-dot"></div>
+          <span id="conn-label">Not connected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backend health -->
+    <div class="panel">
+      <div class="panel-header">Backend Status</div>
+      <div class="panel-body">
+        <div class="status-grid">
+          <div class="status-cell">
+            <div class="status-label">HTTP</div>
+            <div class="status-val" id="stat-http">–</div>
+          </div>
+          <div class="status-cell">
+            <div class="status-label">Telegram</div>
+            <div class="status-val" id="stat-tg">–</div>
+          </div>
+          <div class="status-cell">
+            <div class="status-label">WebSocket</div>
+            <div class="status-val" id="stat-ws">–</div>
+          </div>
+          <div class="status-cell">
+            <div class="status-label">Chats loaded</div>
+            <div class="status-val" id="stat-chats">–</div>
+          </div>
+        </div>
+        <button class="btn secondary" id="btn-health">Poll /health</button>
+      </div>
+    </div>
+
+    <!-- Simulate incoming message -->
+    <div class="panel">
+      <div class="panel-header">Inject WS Message</div>
+      <div class="panel-body">
+        <div class="quick-send">
+          <label>Chat ID
+            <input type="text" id="inject-chatid" placeholder="e.g. 123456789">
+          </label>
+          <label>Message text
+            <textarea id="inject-text" placeholder="Hello from harness!"></textarea>
+          </label>
+          <button class="btn secondary" id="btn-inject">Inject new_message →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Centre: Device -->
+  <div class="device-col">
+
+    <div class="device-frame">
+      <!-- PTT side button -->
+      <div class="side-btn" id="side-btn" title="PTT (hold = record)">
+        <span class="side-btn-label">PTT</span>
+      </div>
+
+      <!-- Screen -->
+      <div class="screen-bezel">
+        <iframe id="creation-frame" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms" allow="microphone"></iframe>
+      </div>
+
+      <!-- Scroll wheel (decorative) -->
+      <div class="scroll-wheel-area" title="Use ▲ ▼ buttons or ↑↓ keys">
+        <div class="scroll-inner">↕</div>
+      </div>
+    </div>
+
+    <!-- Hardware controls -->
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <div class="hw-controls">
+        <button class="hw-btn" id="btn-up">▲ Up</button>
+        <button class="hw-btn" id="btn-down">▼ Down</button>
+        <button class="hw-btn" id="btn-enter">↵ Select</button>
+        <button class="hw-btn" id="btn-back">← Back</button>
+      </div>
+      <div class="hw-controls">
+        <button class="ptt-btn" id="btn-ptt">⬤  Hold PTT</button>
+      </div>
+    </div>
+
+    <!-- Keyboard hints -->
+    <div class="kbd-hints">
+      <kbd class="kbd">Space</kbd><span class="kbd-sep">PTT</span>
+      <kbd class="kbd">↑↓</kbd><span class="kbd-sep">scroll</span>
+      <kbd class="kbd">↵</kbd><span class="kbd-sep">select</span>
+      <kbd class="kbd">⌫ / Esc</kbd><span class="kbd-sep">back</span>
+    </div>
+
+  </div>
+
+  <!-- Right: Event log -->
+  <div class="panel log-panel">
+    <div class="panel-header">
+      Event Log
+      <span style="font-size:10px;color:var(--dim)" id="log-count">0 events</span>
+    </div>
+    <div class="log-body" id="log-body"></div>
+    <div class="log-footer">
+      <button class="btn secondary" style="flex:1" id="btn-clear-log">Clear</button>
+      <button class="btn secondary" style="flex:1" id="btn-copy-log">Copy</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Config persistence ────────────────────────────────────────────────
+const cfgUrlEl   = document.getElementById('cfg-url');
+const cfgTokenEl = document.getElementById('cfg-token');
+
+cfgUrlEl.value   = localStorage.getItem('harness_url')   || '';
+cfgTokenEl.value = localStorage.getItem('harness_token') || '';
+
+// ─── State ────────────────────────────────────────────────────────────
+let backendUrl = '';
+let authToken  = '';
+let ws         = null;
+let wsReady    = false;
+let logEntries = [];
+let pttHeld    = false;
+
+// ─── Log ──────────────────────────────────────────────────────────────
+const logBody  = document.getElementById('log-body');
+const logCount = document.getElementById('log-count');
+
+function log(tag, msg, level = 'info') {
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  logEntries.push({ time, tag, msg, level });
+
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `
+    <span class="log-time">${time}</span>
+    <span class="log-tag ${level}">${tag}</span>
+    <span class="log-msg">${escHtml(msg)}</span>
+  `;
+  logBody.appendChild(el);
+  logBody.scrollTop = logBody.scrollHeight;
+  logCount.textContent = `${logEntries.length} events`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('btn-clear-log').addEventListener('click', () => {
+  logEntries = [];
+  logBody.innerHTML = '';
+  logCount.textContent = '0 events';
+});
+
+document.getElementById('btn-copy-log').addEventListener('click', () => {
+  const text = logEntries.map(e => `${e.time} [${e.tag}] ${e.msg}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => log('INFO', 'Log copied to clipboard'));
+});
+
+// ─── Connection status UI ─────────────────────────────────────────────
+const connDot   = document.getElementById('conn-dot');
+const connLabel = document.getElementById('conn-label');
+const overallPill = document.getElementById('overall-pill');
+const statHttp  = document.getElementById('stat-http');
+const statTg    = document.getElementById('stat-tg');
+const statWs    = document.getElementById('stat-ws');
+const statChats = document.getElementById('stat-chats');
+const tgPill    = document.getElementById('tg-status-pill');
+const wsPill    = document.getElementById('ws-status-pill');
+
+function setConn(state, label) {
+  connDot.className = 'conn-dot ' + state;
+  connLabel.textContent = label;
+  overallPill.textContent = label;
+  overallPill.className = state === 'ok' ? 'pill live' : 'pill';
+}
+
+// ─── iframe & postMessage bridge ──────────────────────────────────────
+const frame = document.getElementById('creation-frame');
+
+function loadCreation() {
+  const url = new URL('index.html', location.href);
+  url.searchParams.set('backend', backendUrl);
+  if (authToken) url.searchParams.set('token', authToken);
+  frame.src = url.toString();
+  log('INFO', 'Loading creation: ' + url.toString());
+}
+
+// Forward hardware events into the iframe
+function sendToFrame(data) {
+  frame.contentWindow?.postMessage(JSON.stringify(data), '*');
+  log('HW', JSON.stringify(data), 'hw');
+}
+
+// Listen for messages FROM the iframe (e.g. debug logs)
+window.addEventListener('message', (e) => {
+  if (e.source === frame.contentWindow) {
+    try {
+      const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      log('FRAME', JSON.stringify(d), 'info');
+    } catch {
+      log('FRAME', String(e.data), 'info');
+    }
+  }
+});
+
+// ─── Connect button ───────────────────────────────────────────────────
+document.getElementById('btn-connect').addEventListener('click', () => {
+  backendUrl = cfgUrlEl.value.trim().replace(/\/+$/, '');
+  authToken  = cfgTokenEl.value.trim();
+
+  if (!backendUrl) { log('ERR', 'Enter a backend URL first', 'err'); return; }
+
+  localStorage.setItem('harness_url',   backendUrl);
+  localStorage.setItem('harness_token', authToken);
+
+  setConn('loading', 'Connecting…');
+  statHttp.textContent  = '…';
+  statTg.textContent    = '…';
+  statWs.textContent    = '…';
+  statChats.textContent = '…';
+
+  loadCreation();
+  pollHealth();
+  connectWS();
+});
+
+// ─── Health poll ──────────────────────────────────────────────────────
+async function pollHealth() {
+  if (!backendUrl) return;
+  try {
+    const res = await fetch(`${backendUrl}/health`, {
+      headers: authToken ? { 'X-Auth-Token': authToken } : {}
+    });
+    const data = await res.json();
+
+    statHttp.textContent = res.ok ? '✓ OK' : `✗ ${res.status}`;
+    statHttp.style.color = res.ok ? 'var(--green)' : 'var(--red)';
+
+    statTg.textContent = data.telegram ? '✓ Connected' : '⟳ Connecting';
+    statTg.style.color = data.telegram ? 'var(--green)' : 'var(--yellow)';
+
+    tgPill.textContent = data.telegram ? 'Telegram: ✓' : 'Telegram: ⟳';
+    tgPill.className   = data.telegram ? 'pill live' : 'pill';
+
+    if (res.ok) setConn('ok', 'Backend reachable');
+    log('NET', `/health → ${JSON.stringify(data)}`, 'net');
+
+    // Also count chats
+    fetchChatCount();
+  } catch (err) {
+    statHttp.textContent = '✗ Unreachable';
+    statHttp.style.color = 'var(--red)';
+    setConn('error', 'Backend unreachable');
+    log('ERR', `/health failed: ${err.message}`, 'err');
+  }
+}
+
+async function fetchChatCount() {
+  try {
+    const res = await fetch(`${backendUrl}/chats`, {
+      headers: authToken ? { 'X-Auth-Token': authToken } : {}
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const n = data.chats?.length ?? '?';
+      statChats.textContent = n;
+      statChats.style.color = 'var(--green)';
+      log('NET', `GET /chats → ${n} chats`, 'net');
+    }
+  } catch {}
+}
+
+document.getElementById('btn-health').addEventListener('click', pollHealth);
+
+// ─── WebSocket ────────────────────────────────────────────────────────
+function connectWS() {
+  if (!backendUrl) return;
+  if (ws) { ws.close(); ws = null; }
+
+  const wsUrl = backendUrl.replace(/^http/, 'ws') + '/ws' +
+    (authToken ? '?token=' + encodeURIComponent(authToken) : '');
+
+  log('WS', 'Connecting → ' + wsUrl, 'ws');
+
+  try {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      wsReady = true;
+      statWs.textContent = '✓ Open';
+      statWs.style.color = 'var(--green)';
+      wsPill.textContent = 'WS: ✓';
+      wsPill.className   = 'pill live';
+      log('WS', 'Connection open', 'ws');
+    };
+
+    ws.onmessage = (e) => {
+      log('WS', '← ' + e.data, 'ws');
+      // Also forward incoming WS events into the iframe so live messages work
+      try {
+        const parsed = JSON.parse(e.data);
+        frame.contentWindow?.postMessage(JSON.stringify({ type: 'wsMessage', payload: parsed }), '*');
+      } catch {}
+    };
+
+    ws.onclose = (e) => {
+      wsReady = false;
+      statWs.textContent = '✗ Closed';
+      statWs.style.color = 'var(--red)';
+      wsPill.textContent = 'WS: ✗';
+      wsPill.className   = 'pill';
+      log('WS', `Closed (code ${e.code})`, 'ws');
+    };
+
+    ws.onerror = () => {
+      log('WS', 'WebSocket error', 'err');
+    };
+  } catch (err) {
+    log('ERR', 'WS connect failed: ' + err.message, 'err');
+  }
+}
+
+// ─── WS message inject ────────────────────────────────────────────────
+document.getElementById('btn-inject').addEventListener('click', () => {
+  const chatId = document.getElementById('inject-chatid').value.trim();
+  const text   = document.getElementById('inject-text').value.trim();
+  if (!chatId || !text) { log('ERR', 'Fill in chat ID and text first', 'err'); return; }
+
+  const payload = {
+    type: 'new_message',
+    chatId,
+    message: {
+      id: Date.now(),
+      text,
+      date: Math.floor(Date.now() / 1000),
+      out: false,
+      senderName: 'Harness Inject',
+    },
+  };
+
+  // Push directly into iframe (bypasses WS for instant harness testing)
+  frame.contentWindow?.postMessage(JSON.stringify(payload), '*');
+  log('WS', '→ inject: ' + JSON.stringify(payload), 'ws');
+});
+
+// ─── Hardware buttons ─────────────────────────────────────────────────
+document.getElementById('btn-up').addEventListener('click', () =>
+  sendToFrame({ type: 'scrollWheel', direction: 'up', event: 'scrollWheel', delta: -1 }));
+
+document.getElementById('btn-down').addEventListener('click', () =>
+  sendToFrame({ type: 'scrollWheel', direction: 'down', event: 'scrollWheel', delta: 1 }));
+
+document.getElementById('btn-enter').addEventListener('click', () =>
+  sendToFrame({ type: 'select' }));
+
+document.getElementById('btn-back').addEventListener('click', () =>
+  sendToFrame({ type: 'back' }));
+
+// PTT hold button
+const pttBtn = document.getElementById('btn-ptt');
+let pttHeldFlag = false;
+
+function pttPress() {
+  if (pttHeldFlag) return;
+  pttHeldFlag = true;
+  pttBtn.classList.add('held');
+  pttBtn.textContent = '⬤  Recording…';
+  sendToFrame({ type: 'sideButtonDown', event: 'sideClick' });
+}
+function pttRelease() {
+  if (!pttHeldFlag) return;
+  pttHeldFlag = false;
+  pttBtn.classList.remove('held');
+  pttBtn.textContent = '⬤  Hold PTT';
+  sendToFrame({ type: 'sideButtonUp' });
+}
+
+pttBtn.addEventListener('mousedown', pttPress);
+pttBtn.addEventListener('mouseup',   pttRelease);
+pttBtn.addEventListener('mouseleave', pttRelease);
+pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pttPress(); });
+pttBtn.addEventListener('touchend',   (e) => { e.preventDefault(); pttRelease(); });
+
+// Side button on device frame
+const sideBtn = document.getElementById('side-btn');
+sideBtn.addEventListener('mousedown', pttPress);
+sideBtn.addEventListener('mouseup',   pttRelease);
+sideBtn.addEventListener('mouseleave', pttRelease);
+
+// ─── Keyboard controls (keys → iframe) ────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  // Don't hijack when typing in inputs
+  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.repeat) return;
+
+  switch (e.code) {
+    case 'Space':
+      e.preventDefault();
+      pttPress();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      sendToFrame({ type: 'scrollWheel', direction: 'up', event: 'scrollWheel', delta: -1 });
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      sendToFrame({ type: 'scrollWheel', direction: 'down', event: 'scrollWheel', delta: 1 });
+      break;
+    case 'Enter':
+      e.preventDefault();
+      sendToFrame({ type: 'select' });
+      break;
+    case 'Escape':
+    case 'Backspace':
+      // Only prevent backspace if not in an input
+      if (e.code === 'Backspace') e.preventDefault();
+      sendToFrame({ type: 'back' });
+      break;
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    pttRelease();
+  }
+});
+
+// ─── Mouse wheel on device frame → scroll events ──────────────────────
+document.querySelector('.screen-bezel').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const dir = e.deltaY > 0 ? 'down' : 'up';
+  sendToFrame({ type: 'scrollWheel', direction: dir, event: 'scrollWheel', delta: e.deltaY });
+}, { passive: false });
+
+// ─── Init log ─────────────────────────────────────────────────────────
+log('INFO', 'Harness ready. Enter backend URL and click Connect.');
+log('INFO', 'Keyboard: Space=PTT, ↑↓=scroll, ↵=select, Esc/⌫=back');
+
+// Auto-connect if config already saved
+if (cfgUrlEl.value) {
+  log('INFO', 'Saved config found — click Connect to load.');
+}
+</script>
+</body>
+</html>
