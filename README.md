@@ -180,30 +180,95 @@ R1 Telegram backend listening on :3000
 
 Your backend is now running locally on port 3000. Keep this terminal window open.
 
-**The R1 requires HTTPS**, so you need to expose your backend over a secure URL. The easiest options:
+---
 
-#### Option A — Quick test with a tunnel (no account needed)
+### Step 5b — Expose publicly over HTTPS
 
-Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) then, in a **second** terminal window:
+**The R1 requires a public HTTPS URL** to reach your backend. It cannot access `localhost`.
+
+> **Use a stable URL.** The R1 creation URL is registered once on the device. If your backend URL changes (e.g. after a server restart), the R1 app stops working and you have to re-register a new creation from scratch. Pick a hosting option that gives you a permanent URL.
+
+---
+
+#### Option A — ngrok (easiest, no domain needed)
+
+1. Sign up free at [ngrok.com](https://ngrok.com)
+2. `npm install -g ngrok`
+3. `ngrok config add-authtoken YOUR_TOKEN`
+4. In a second terminal: `ngrok http 3000`
+
+ngrok assigns you a permanent subdomain (`https://yourname.ngrok.app`) that never changes between restarts. Use it as your backend URL in Step 6.
+
+---
+
+#### Option B — Cloudflare named tunnel (if you have a domain)
+
+1. Create a free [Cloudflare account](https://cloudflare.com) and add your domain
+2. [Install cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+3. `cloudflared login`
+4. `cloudflared tunnel create r1-telegram`
+5. `cloudflared tunnel route dns r1-telegram r1-telegram.yourdomain.com`
+6. Create `~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: r1-telegram
+credentials-file: /root/.cloudflared/<tunnel-id>.json
+ingress:
+  - hostname: r1-telegram.yourdomain.com
+    service: http://localhost:3000
+  - service: http_status:404
+```
+
+7. `cloudflared tunnel run r1-telegram`
+8. To auto-start on boot: `cloudflared service install`
+
+---
+
+#### Option C — Cloud platform (Railway / Render / Fly.io)
+
+Deploy directly from your GitHub fork — the platform manages HTTPS and gives you a permanent URL:
+
+| Platform | How |
+|----------|-----|
+| **Railway** | [railway.app](https://railway.app) → New Project → Deploy from GitHub → set env vars in dashboard |
+| **Render** | [render.com](https://render.com) → New Web Service → connect repo → Start Command: `npm start` → set env vars |
+| **Fly.io** | Install [flyctl](https://fly.io/docs/hands-on/install-flyctl/) → `fly launch` → `fly deploy` → `fly secrets set KEY=VALUE` |
+
+> Set your `.env` values as **environment variables** in the platform's dashboard — never upload the `.env` file itself.
+
+---
+
+#### Option D — VPS with Caddy (self-hosted, always-on)
+
+Recommended if you want full control and 24/7 uptime. A €4/month VPS (Hetzner, DigitalOcean, Linode) is enough.
+
+1. SSH into your VPS, clone the repo, run `npm install`
+2. Install PM2 to keep the server running: `npm install -g pm2 && pm2 start server.js --name r1-telegram && pm2 save && pm2 startup`
+3. Install [Caddy](https://caddyserver.com/docs/install) and create `/etc/caddy/Caddyfile`:
+
+```
+r1-telegram.yourdomain.com {
+    reverse_proxy localhost:3000
+}
+```
+
+4. `sudo systemctl enable --now caddy`
+
+Caddy provisions a Let's Encrypt cert automatically. Your URL is permanent from day one and the server survives reboots.
+
+---
+
+#### Option E — Quick test only (URL changes on restart)
 
 ```bash
 node tunnel.js
 ```
 
-This prints a temporary `https://...trycloudflare.com` URL. Use that as your backend URL in Step 6. Note: the URL changes every time you restart.
+Prints a temporary `https://...trycloudflare.com` URL. Works for a quick test but changes every restart — don't register this as a permanent R1 creation URL.
 
-#### Option B — Permanent hosting (recommended)
+---
 
-| Platform | How |
-|----------|-----|
-| **Railway** | Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo → it auto-detects Node and deploys |
-| **Render** | Go to [render.com](https://render.com) → New Web Service → connect your GitHub repo → set Start Command to `npm start` |
-| **Fly.io** | Install the [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/) → `fly launch` → `fly deploy` |
-| **VPS** (recommended for always-on) | Rent a small VPS (e.g. [Hetzner](https://www.hetzner.com/cloud), [DigitalOcean](https://www.digitalocean.com), [Linode](https://www.linode.com)) — a €4/month instance is plenty. SSH in, clone the repo, run `npm install && npm start` under a process manager like [PM2](https://pm2.keymetrics.io/) (`npm install -g pm2 && pm2 start server.js --name r1-telegram`), and put it behind [Caddy](https://caddyserver.com/) for automatic HTTPS. Your backend runs 24/7 and survives reboots. |
-
-After deploying, copy the HTTPS URL the platform gives you (e.g. `https://r1-telegram.up.railway.app`). You'll use it in Step 6.
-
-> When deploying to a platform, add your `.env` values as **environment variables** in the platform's dashboard — don't upload the `.env` file itself.
+After choosing an option, copy the HTTPS URL (e.g. `https://r1-telegram.up.railway.app`). You'll use it in Step 6.
 
 ---
 
