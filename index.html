@@ -413,6 +413,7 @@
     <div class="back" id="btn-back">‹</div>
     <div class="title" id="chat-title">Chat</div>
     <div id="btn-tts" style="font-size:14px;cursor:pointer;padding:2px 4px;opacity:0.5;" title="Toggle TTS">🔇</div>
+    <div id="btn-keyboard" style="font-size:13px;cursor:pointer;padding:2px 4px;opacity:0.7;" title="Type message">⌨️</div>
   </div>
   <div class="messages-list" id="messages-list"></div>
   <div id="ptt-btn" style="
@@ -462,6 +463,18 @@
       <button class="btn-send" id="btn-setup-save" style="width:100%">Connect</button>
     </div>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: Compose (keyboard text input)                              -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-compose" class="screen">
+  <div class="header">
+    <div class="back" id="btn-compose-cancel">‹</div>
+    <div class="title">Type Message</div>
+    <button id="btn-compose-send" style="font-size:11px;background:#2aabee;border:none;border-radius:4px;padding:4px 8px;color:#fff;cursor:pointer;font-weight:600;">Send</button>
+  </div>
+  <textarea id="compose-input" placeholder="Type a message…" autocomplete="off" spellcheck="true" style="flex:1;width:100%;box-sizing:border-box;background:#0e0e0e;border:none;outline:none;color:#e8e8e8;font-family:inherit;font-size:14px;line-height:1.5;padding:8px;resize:none;"></textarea>
 </div>
 
 <!-- Recording Overlay (floats above chat view) -->
@@ -1177,6 +1190,33 @@ $('#btn-read-all').addEventListener('click', async () => {
 $('#btn-tts').addEventListener('click', toggleTTS);
 $('#btn-discard').addEventListener('click', () => showScreen('chat'));
 $('#btn-confirm-send').addEventListener('click', sendMessage);
+$('#btn-keyboard').addEventListener('click', () => {
+  const input = $('#compose-input');
+  input.value = '';
+  showScreen('compose');
+  setTimeout(() => input.focus(), 80);
+});
+$('#btn-compose-cancel').addEventListener('click', () => {
+  showScreen('chat');
+});
+$('#btn-compose-send').addEventListener('click', async () => {
+  const text = $('#compose-input').value.trim();
+  if (!text || !currentChatId) return;
+  $('#compose-input').value = '';
+  toast('Sending…');
+  showScreen('chat');
+  try {
+    await api('/chats/' + currentChatId + '/send', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+    messages.push({ id: Date.now(), text, date: Math.floor(Date.now()/1000), out: true, senderName: 'You' });
+    renderMessages();
+    toast('Sent ✓');
+  } catch (err) {
+    toast('Send failed');
+  }
+});
 
 // Setup screen save button
 $('#btn-setup-save').addEventListener('click', () => {
