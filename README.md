@@ -1,6 +1,6 @@
 # R1 Telegram
 
-Browse and reply to your Telegram chats using voice on the Rabbit R1.
+Browse and reply to your Telegram chats using voice or keyboard on the Rabbit R1.
 
 ```
 ┌──────────────────┐       HTTPS / WS         ┌──────────────────────┐
@@ -41,40 +41,131 @@ r1-telegram/
 
 ## Setup
 
-### 1. Get Telegram API Credentials
+You will need:
+- A computer running **macOS, Linux, or Windows** with internet access
+- **Node.js** (version 18 or later) — download from [nodejs.org](https://nodejs.org) if you don't have it
+- A **Telegram account** (the one you want to read on the R1)
+- Somewhere to host the backend over HTTPS (see Step 5)
 
-Go to [my.telegram.org/apps](https://my.telegram.org/apps), log in, and create an application. Note your **API ID** and **API Hash**.
+---
 
-### 2. Configure the Backend
+### Step 1 — Download the code
+
+Open a terminal:
+- **macOS**: press `Cmd + Space`, type `Terminal`, press Enter
+- **Windows**: press `Win + R`, type `cmd`, press Enter (or use [Windows Terminal](https://aka.ms/terminal))
+- **Linux**: open your terminal application
+
+Run these commands one at a time, pressing Enter after each:
+
+```bash
+git clone https://github.com/Ashosystem/r1-telegram-kit.git
+cd r1-telegram-kit
+```
+
+> **No git?** Download the ZIP instead: click the green **Code** button on GitHub → **Download ZIP** → unzip it → open your terminal and `cd` into the unzipped folder.
+>
+> Example on macOS/Linux (adjust the folder name if needed):
+> ```bash
+> cd ~/Downloads/r1-telegram-kit-main
+> ```
+> On Windows:
+> ```
+> cd C:\Users\YourName\Downloads\r1-telegram-kit-main
+> ```
+
+---
+
+### Step 2 — Get Telegram API credentials
+
+1. Go to [my.telegram.org/apps](https://my.telegram.org/apps) in a browser
+2. Log in with the phone number of the Telegram account you want to use on the R1
+3. Click **Create new application** (fill in any name and description — it doesn't matter)
+4. Copy your **App api_id** (a number, e.g. `12345678`) and **App api_hash** (a long string)
+
+Keep this browser tab open — you'll need these values in the next step.
+
+---
+
+### Step 3 — Configure your environment file
+
+In your terminal (make sure you're still inside the `r1-telegram-kit` folder), run:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and fill in:
+Now open the `.env` file in a text editor. On macOS you can run:
 
-```env
-TELEGRAM_API_ID=12345678
-TELEGRAM_API_HASH=abcdef1234567890abcdef1234567890
-R1_AUTH_TOKEN=some-random-secret-string
+```bash
+open -e .env
+```
+
+On Windows:
+
+```
+notepad .env
+```
+
+On Linux:
+
+```bash
+nano .env
+```
+
+You'll see this:
+
+```
+TELEGRAM_API_ID=
+TELEGRAM_API_HASH=
+TELEGRAM_SESSION=
+R1_AUTH_TOKEN=change-me-to-something-random
 PORT=3000
-
-# Optional: enables server-side TTS fallback (not needed on R1 — native speaker used instead)
 OPENAI_API_KEY=
 ```
 
-`R1_AUTH_TOKEN` is a secret you choose — it prevents anyone else from using your backend. Use any random string.
+Fill it in:
 
-### 3. Install Dependencies & Authenticate
+| Field | What to put |
+|-------|-------------|
+| `TELEGRAM_API_ID` | The App api_id number from Step 2 |
+| `TELEGRAM_API_HASH` | The App api_hash string from Step 2 |
+| `TELEGRAM_SESSION` | Leave blank for now — you'll fill this in after Step 4 |
+| `R1_AUTH_TOKEN` | Make up any password, e.g. `my-secret-123`. This stops others from using your backend. |
+| `PORT` | Leave as `3000` |
+| `OPENAI_API_KEY` | Optional — only needed for TTS on desktop. Leave blank if you don't have one. |
+
+Save and close the file.
+
+---
+
+### Step 4 — Install dependencies and log in to Telegram
+
+In your terminal, run:
 
 ```bash
 npm install
+```
+
+This downloads the required packages. It may take a minute. When it finishes, run:
+
+```bash
 npm run setup
 ```
 
-This prompts for your Telegram phone number and OTP code. On success it prints a `TELEGRAM_SESSION=...` line — paste that into your `.env`.
+You'll be asked for your Telegram phone number (include the country code, e.g. `+447700900000`). Enter it and press Enter. Telegram will send you a confirmation code — enter that too.
 
-### 4. Start the Server
+On success you'll see a line like:
+
+```
+TELEGRAM_SESSION=1BVtsOKABu3Q...
+```
+
+Copy the entire value after `TELEGRAM_SESSION=` and paste it into your `.env` file on the `TELEGRAM_SESSION=` line. Save the file.
+
+---
+
+### Step 5 — Start the server
 
 ```bash
 npm start
@@ -87,34 +178,50 @@ Telegram client connected.
 R1 Telegram backend listening on :3000
 ```
 
-### 5. Deploy to HTTPS
+Your backend is now running locally on port 3000. Keep this terminal window open.
 
-The R1 requires HTTPS. Options:
+**The R1 requires HTTPS**, so you need to expose your backend over a secure URL. The easiest options:
 
-| Host | Notes |
-|------|-------|
-| **Railway** | Connect repo → auto-deploy |
-| **Render** | Web Service → Node → `npm start` |
-| **Fly.io** | `fly launch` → `fly deploy` |
-| **VPS** | Use the included Dockerfile, put behind Caddy/nginx with TLS |
+#### Option A — Quick test with a tunnel (no account needed)
 
-For quick local testing, use `node tunnel.js` (requires [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)).
+Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) then, in a **second** terminal window:
 
-### 6. Install the Creation on R1
-
-The creation URL is:
-
-```
-https://your-backend.com/index.html?backend=https://your-backend.com&token=your-auth-token
+```bash
+node tunnel.js
 ```
 
-If you're hosting `index.html` separately (e.g. GitHub Pages):
+This prints a temporary `https://...trycloudflare.com` URL. Use that as your backend URL in Step 6. Note: the URL changes every time you restart.
+
+#### Option B — Permanent hosting (recommended)
+
+| Platform | How |
+|----------|-----|
+| **Railway** | Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo → it auto-detects Node and deploys |
+| **Render** | Go to [render.com](https://render.com) → New Web Service → connect your GitHub repo → set Start Command to `npm start` |
+| **Fly.io** | Install the [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/) → `fly launch` → `fly deploy` |
+
+After deploying, copy the HTTPS URL the platform gives you (e.g. `https://r1-telegram.up.railway.app`). You'll use it in Step 6.
+
+> When deploying to a platform, add your `.env` values as **environment variables** in the platform's dashboard — don't upload the `.env` file itself.
+
+---
+
+### Step 6 — Install the creation on your R1
+
+Construct your creation URL:
 
 ```
-https://your-static-host.com/index.html?backend=https://your-backend.com&token=your-auth-token
+https://YOUR-BACKEND-URL/index.html?backend=https://YOUR-BACKEND-URL&token=YOUR-AUTH-TOKEN
 ```
 
-Generate a QR code from that URL and scan it with your R1 to install.
+Replace `YOUR-BACKEND-URL` with the HTTPS URL from Step 5, and `YOUR-AUTH-TOKEN` with the `R1_AUTH_TOKEN` value you set in Step 3.
+
+**Example:**
+```
+https://r1-telegram.up.railway.app/index.html?backend=https://r1-telegram.up.railway.app&token=my-secret-123
+```
+
+Go to any free QR code generator (e.g. [qr-code-generator.com](https://www.qr-code-generator.com)), paste in your URL, and generate a QR code. Scan it with your R1 to install the creation.
 
 ---
 
