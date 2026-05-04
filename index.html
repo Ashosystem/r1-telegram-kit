@@ -953,13 +953,15 @@ async function sendMessage() {
   showScreen('chat');
 
   try {
-    await api(`/chats/${currentChatId}/send`, {
+    const result = await api(`/chats/${currentChatId}/send`, {
       method: 'POST',
       body: JSON.stringify({ text }),
     });
 
+    const sentId = result.messageId || Date.now();
+    lastSeenMsgId = Math.max(lastSeenMsgId, sentId);
     messages.push({
-      id: Date.now(),
+      id: sentId,
       text,
       date: Math.floor(Date.now() / 1000),
       out: true,
