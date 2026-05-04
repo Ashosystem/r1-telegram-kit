@@ -1145,6 +1145,7 @@ window.addEventListener('scrollDown', () => handleScroll('up'));
 // so the hardware handlers above are the single source of truth.
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
+  if (document.activeElement === $('#compose-input')) return;
   if (e.key === ' ')              { e.preventDefault(); window.dispatchEvent(new Event('longPressStart')); }
   else if (e.key === 'Escape')    { window.dispatchEvent(new Event('sideClick')); }
   else if (e.key === 'ArrowUp')   { window.dispatchEvent(new Event('scrollUp')); }
@@ -1153,6 +1154,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'Backspace') { handleBack(); }
 });
 document.addEventListener('keyup', (e) => {
+  if (document.activeElement === $('#compose-input')) return;
   if (e.key === ' ') {
     e.preventDefault();
     window.dispatchEvent(new Event('longPressEnd'));
