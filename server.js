@@ -51,6 +51,7 @@ async function connectTelegram() {
         senderName: sender
           ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') || sender.title || 'Unknown'
           : 'Unknown',
+        hasPhoto:   !!msg.media?.photo,
       },
     });
   }, new NewMessage({}));
@@ -88,7 +89,7 @@ app.get('/health', (_req, res) => res.json({ ok: true, telegram: clientReady }))
 // ─── GET /chats ──────────────────────────────────────────────────────
 app.get('/chats', auth, async (_req, res) => {
   try {
-    const dialogs = await telegram.getDialogs({ limit: 30 });
+    const dialogs = await telegram.getDialogs({ limit: 30, archived: false });
     res.json({ chats: dialogs.map((d) => ({
       id:          d.id?.toString(),
       name:        d.title || d.name || 'Unknown',
@@ -117,7 +118,7 @@ app.get('/chats/:id/messages', auth, async (req, res) => {
         const s = await m.getSender();
         if (s) senderName = [s.firstName, s.lastName].filter(Boolean).join(' ') || s.title || 'Unknown';
       } catch {}
-      result.push({ id: m.id, text: m.text || '', date: m.date, out: m.out, senderName });
+      result.push({ id: m.id, text: m.text || '', date: m.date, out: m.out, senderName, hasPhoto: !!m.media?.photo });
     }
     result.reverse();
     res.json({ messages: result });
@@ -156,7 +157,7 @@ app.post('/chats/:id/read', auth, async (req, res) => {
 // ─── POST /chats/read-all ─────────────────────────────────────────────
 app.post('/chats/read-all', auth, async (_req, res) => {
   try {
-    const dialogs = await telegram.getDialogs({ limit: 30 });
+    const dialogs = await telegram.getDialogs({ limit: 30, archived: false });
     const unread = dialogs.filter(d => (d.unreadCount || 0) > 0);
     for (const d of unread) {
       const entity = await telegram.getEntity(d.id);
@@ -209,6 +210,25 @@ app.post('/stt', auth, express.raw({ type: '*/*', limit: '5mb' }), async (req, r
   } catch (err) {
     console.error('POST /stt error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /chats/:chatId/messages/:msgId/photo ─────────────────────────
+app.get('/chats/:chatId/messages/:msgId/photo', auth, async (req, res) => {
+  try {
+    const entity = await telegram.getEntity(req.params.chatId);
+    const msgs   = await telegram.getMessages(entity, { ids: [parseInt(req.params.msgId)] });
+    if (!msgs[0]?.media?.photo) return res.status(404).send('No photo');
+    const photo     = msgs[0].media.photo;
+    const thumbSize = photo.sizes?.find(s => s.type === 'm') || photo.sizes?.[0];
+    const buffer    = await telegram.downloadMedia(msgs[0], { thumb: thumbSize });
+    if (!buffer) return res.status(404).send('Download failed');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('GET photo error:', err.message);
+    res.status(500).send(err.message);
   }
 });
 
