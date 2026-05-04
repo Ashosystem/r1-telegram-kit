@@ -539,6 +539,7 @@ const screenList    = $('#screen-list');
 const screenChat    = $('#screen-chat');
 const screenConfirm = $('#screen-confirm');
 const screenSetup   = $('#screen-setup');
+const screenCompose = $('#screen-compose');
 const chatListEl    = $('#chat-list');
 const msgsListEl    = $('#messages-list');
 const totalUnread   = $('#total-unread');
@@ -568,6 +569,7 @@ function showScreen(name) {
   screenChat.classList.toggle('active', name === 'chat');
   screenConfirm.classList.toggle('active', name === 'confirm');
   screenSetup.classList.toggle('active', name === 'setup');
+  screenCompose.classList.toggle('active', name === 'compose');
 }
 
 function setConnStatus(state) {
