@@ -530,6 +530,8 @@ let currentChatName = '';
 let messages = [];
 let pendingTranscript = '';
 let isRecording = false;
+let chatPollTimer = null;
+let lastSeenMsgId = 0;
 let recognition = null;
 let ws = null;
 let refreshTimer = null;
@@ -711,7 +713,9 @@ async function openChat(chat) {
   try {
     const data = await api(`/chats/${chat.id}/messages?limit=25`);
     messages = data.messages || [];
+    lastSeenMsgId = messages.reduce((max, m) => Math.max(max, m.id), 0);
     renderMessages();
+    startChatPolling();
 
     // Mark as read
     api(`/chats/${chat.id}/read`, { method: 'POST' }).catch(() => {});
@@ -1050,6 +1054,7 @@ function toggleTTS() {
 function handleLiveMessage(data) {
   if (currentScreen === 'chat' && data.chatId === currentChatId) {
     messages.push(data.message);
+    lastSeenMsgId = Math.max(lastSeenMsgId, data.message.id);
     renderMessages();
     if (!data.message.out) speak(data.message.text);
   }
@@ -1057,6 +1062,28 @@ function handleLiveMessage(data) {
   if (currentScreen === 'list') {
     loadChats();
   }
+}
+
+function startChatPolling() {
+  stopChatPolling();
+  chatPollTimer = setInterval(async () => {
+    if (currentScreen !== 'chat' || !currentChatId) return;
+    try {
+      const data = await api(`/chats/${currentChatId}/messages?limit=5`);
+      const incoming = (data.messages || []).filter(m => m.id > lastSeenMsgId);
+      if (!incoming.length) return;
+      for (const m of incoming) {
+        messages.push(m);
+        lastSeenMsgId = Math.max(lastSeenMsgId, m.id);
+        if (!m.out) speak(m.text);
+      }
+      renderMessages();
+    } catch {}
+  }, 4000);
+}
+
+function stopChatPolling() {
+  if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
 }
 
 // ─── Input Handlers ───────────────────────────────────────────────────
@@ -1091,6 +1118,7 @@ function handleSelect() {
 
 function handleBack() {
   if (currentScreen === 'chat') {
+    stopChatPolling();
     showScreen('list');
     currentChatId = null;
     loadChats();
