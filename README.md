@@ -222,7 +222,7 @@ Replace `YOUR-BACKEND-URL` with the HTTPS URL from Step 5, and `YOUR-AUTH-TOKEN`
 https://r1-telegram.up.railway.app/index.html?backend=https://r1-telegram.up.railway.app&token=my-secret-123
 ```
 
-Go to any free QR code generator (e.g. [qr-code-generator.com](https://www.qr-code-generator.com)), paste in your URL, and generate a QR code. Scan it with your R1 to install the creation.
+Go to [boondit.site/r1-generator](https://boondit.site/r1-generator), paste in your URL, and generate a QR code. Scan it with your R1 to install the creation.
 
 ---
 
