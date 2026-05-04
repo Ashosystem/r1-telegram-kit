@@ -18,6 +18,7 @@ Browse and reply to your Telegram chats using voice on the Rabbit R1.
 - Scroll with the R1 wheel, tap or use PTT to open chats
 - Voice-to-text replies using R1's onboard STT (PTT button → speak → confirm)
 - Text-to-speech: incoming messages spoken aloud via R1's native speaker
+- Keyboard text input: tap ⌨️ to open a compose screen and type a message with the onboard keyboard
 - Unread badges and mark-as-read
 - Real-time message push via WebSocket
 - Works with any Telegram user account (not limited to bots)
@@ -119,13 +120,14 @@ Generate a QR code from that URL and scan it with your R1 to install.
 
 ## R1 Controls
 
-| Control | Chat List | Chat View | Confirm |
-|---------|-----------|-----------|---------|
-| **Scroll wheel** | Navigate up/down | Scroll messages | Toggle Cancel/Send |
-| **PTT press** | Open selected chat | Start recording | — |
-| **PTT release** | — | Stop recording → confirm send | — |
-| **Tap** | Open tapped chat | — | Tap Cancel or Send |
-| **🔇/🔊 button** | — | Toggle text-to-speech | — |
+| Control | Chat List | Chat View | Compose | Confirm |
+|---------|-----------|-----------|---------|---------|
+| **Scroll wheel** | Navigate up/down | Scroll messages | — | Toggle Cancel/Send |
+| **PTT press** | Open selected chat | Start recording | — | — |
+| **PTT release** | — | Stop recording → confirm send | — | — |
+| **Tap** | Open tapped chat | — | Tap textarea, type, tap Send | Tap Cancel or Send |
+| **⌨️ button** | — | Open compose screen | — | — |
+| **🔇/🔊 button** | — | Toggle text-to-speech | — | — |
 
 ---
 
@@ -161,7 +163,7 @@ Open `harness.html` in a browser for a testing UI with mocked R1 controls.
 
 To test the creation itself in a 240×282 browser window, keyboard controls:
 
-- **Space** = PTT (hold to record, release to stop)
+- **Space** = PTT (hold to record, release to stop) — in compose screen, all keys pass directly to the textarea
 - **Arrow Up/Down** = Scroll wheel
 - **Enter** = Select / confirm
 - **Escape** = Back
