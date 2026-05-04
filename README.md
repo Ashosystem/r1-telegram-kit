@@ -3,7 +3,7 @@
 Browse and reply to your Telegram chats using voice on the Rabbit R1.
 
 ```
-┌──────────────────┐       HTTPS / WS       ┌──────────────────────┐
+┌──────────────────┐       HTTPS / WS         ┌──────────────────────┐
 │   Rabbit R1      │ ◄──────────────────────► │   Hosted Backend     │
 │   240×282 WebView│                          │   (Node.js + GramJS) │
 │   + PTT button   │   REST: /chats /send     │   Holds TG session   │
