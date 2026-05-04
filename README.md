@@ -199,6 +199,7 @@ This prints a temporary `https://...trycloudflare.com` URL. Use that as your bac
 | **Railway** | Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo → it auto-detects Node and deploys |
 | **Render** | Go to [render.com](https://render.com) → New Web Service → connect your GitHub repo → set Start Command to `npm start` |
 | **Fly.io** | Install the [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/) → `fly launch` → `fly deploy` |
+| **VPS** (recommended for always-on) | Rent a small VPS (e.g. [Hetzner](https://www.hetzner.com/cloud), [DigitalOcean](https://www.digitalocean.com), [Linode](https://www.linode.com)) — a €4/month instance is plenty. SSH in, clone the repo, run `npm install && npm start` under a process manager like [PM2](https://pm2.keymetrics.io/) (`npm install -g pm2 && pm2 start server.js --name r1-telegram`), and put it behind [Caddy](https://caddyserver.com/) for automatic HTTPS. Your backend runs 24/7 and survives reboots. |
 
 After deploying, copy the HTTPS URL the platform gives you (e.g. `https://r1-telegram.up.railway.app`). You'll use it in Step 6.
 
