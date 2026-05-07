@@ -38,6 +38,20 @@
     user-select: none;
     -webkit-user-select: none;
   }
+  #app {
+    position: absolute;
+    width: 240px; height: 282px;
+    top: 0; left: 0;
+    transition: transform 0.25s ease;
+  }
+  #app.landscape {
+    width: 282px; height: 240px;
+    top: 21px; left: -21px;
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+  body.in-landscape .chat-list,
+  body.in-landscape .messages-list { overflow: hidden; touch-action: none; }
 
   /* ─── Screen Container ────────────────────────────────────────── */
   .screen {
@@ -225,6 +239,27 @@
   }
 
   .msg-bubble.has-photo { max-width: 96%; }
+  .msg-reply {
+    font-size: 9px; color: var(--text-dim);
+    border-left: 2px solid var(--accent);
+    padding: 1px 5px; margin-bottom: 2px;
+    border-radius: 2px; background: rgba(42,171,238,0.08);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .msg-reply-author { color: var(--accent); font-weight: 700; margin-right: 3px; }
+  .msg-reactions { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+  .msg-reaction { font-size: 9px; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1px 5px; }
+  .audio-player {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(42,171,238,0.08);
+    border: 1px solid #2a2a2a; border-radius: 6px;
+    padding: 4px 7px; margin-top: 3px;
+    cursor: pointer; touch-action: manipulation;
+    user-select: none; -webkit-user-select: none;
+  }
+  .audio-play-btn { font-size: 13px; flex-shrink: 0; pointer-events: none; }
+  .audio-label { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .audio-player.playing { border-color: var(--accent); background: rgba(42,171,238,0.18); }
   .msg-bubble ul { margin: 2px 0 2px 10px; padding: 0; }
   .msg-bubble li { margin: 1px 0; list-style: disc; }
   .msg-bubble code { background: rgba(255,255,255,0.12); border-radius: 2px; padding: 0 2px; font-family: monospace; font-size: 9px; }
@@ -385,9 +420,127 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+
+  /* ─── DOM Keyboard ────────────────────────────────────────────── */
+  #compose-history {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  #compose-history::-webkit-scrollbar { width: 2px; }
+  #compose-history::-webkit-scrollbar-thumb { background: #333; }
+  #compose-history .msg-bubble { font-size: 9px; padding: 3px 6px; pointer-events: none; }
+  #compose-history .msg-sender { font-size: 8px; }
+  #compose-history .msg-time { display: none; }
+  #compose-area {
+    flex-shrink: 0;
+    position: relative;
+    margin: 3px 8px 3px;
+  }
+  #compose-display {
+    height: 36px;
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 5px 22px 5px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-y: auto;
+    word-break: break-word;
+    color: var(--text);
+    border: 1px solid #2a2a2a;
+  }
+  #compose-display:empty::before { content: 'Type a message…'; color: var(--text-dim); pointer-events: none; }
+  #compose-display:focus { outline: none; }
+  #compose-display { caret-color: var(--accent); }
+  #kbd-dismiss-btn {
+    position: absolute;
+    top: 3px; right: 4px;
+    background: none; border: none; color: var(--text-dim);
+    font-size: 14px; line-height: 1; cursor: pointer; padding: 2px;
+    touch-action: manipulation;
+    user-select: none; -webkit-user-select: none;
+  }
+  #virtual-keyboard {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 1px 4px 2px;
+    gap: 1px;
+    background: #111;
+  }
+  .kbd-row {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+  }
+  .key {
+    flex: 1;
+    min-height: 22px;
+    background: #2a2a2e;
+    border: 1px solid #555;
+    border-bottom: 2px solid #444;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+    user-select: none; -webkit-user-select: none;
+  }
+  .key:active { background: #555; }
+  .key.wide   { flex: 1.6; font-size: 9px; }
+  .key.space  { flex: 4; }
+  .key.action { background: #1a6fa0; border-color: #124e70; }
+  .key.action:active { background: #2aabee; }
+  .key.shifted { background: #3a3a44; color: #aad4ff; }
+  #emoji-backdrop {
+    position: absolute; inset: 0; z-index: 199; display: none;
+  }
+  #emoji-backdrop.open { display: block; }
+  #emoji-picker {
+    position: absolute;
+    z-index: 200;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 232px;
+    max-height: 156px;
+    background: #1e1e24;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 6px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  }
+  #emoji-picker.open { display: block; }
+  #emoji-picker::-webkit-scrollbar { width: 2px; }
+  #emoji-picker::-webkit-scrollbar-thumb { background: #2a2a2a; }
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .emoji-btn {
+    font-size: 17px;
+    height: 28px;
+    background: none; border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+  }
+  .emoji-btn:active { background: #2a2a2a; }
 </style>
 </head>
 <body>
+<div id="app">
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <!-- SCREEN: Chat List                                                  -->
@@ -475,7 +628,31 @@
     <div class="title">Type Message</div>
     <button id="btn-compose-send" style="font-size:11px;background:#2aabee;border:none;border-radius:4px;padding:4px 8px;color:#fff;cursor:pointer;font-weight:600;">Send</button>
   </div>
-  <textarea id="compose-input" placeholder="Type a message…" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="send" style="flex:1;width:100%;box-sizing:border-box;background:#0e0e0e;border:none;outline:none;color:#e8e8e8;font-family:inherit;font-size:14px;line-height:1.5;padding:8px;resize:none;"></textarea>
+  <div id="compose-history"></div>
+  <div id="compose-area">
+    <div id="compose-display" contenteditable="true" spellcheck="false" inputmode="none"></div>
+    <button id="kbd-dismiss-btn" title="Back to chat">&#8964;</button>
+  </div>
+  <div id="virtual-keyboard">
+    <div class="kbd-row">
+      <button class="key" data-k="q">q</button><button class="key" data-k="w">w</button><button class="key" data-k="e">e</button><button class="key" data-k="r">r</button><button class="key" data-k="t">t</button><button class="key" data-k="y">y</button><button class="key" data-k="u">u</button><button class="key" data-k="i">i</button><button class="key" data-k="o">o</button><button class="key" data-k="p">p</button>
+    </div>
+    <div class="kbd-row" style="padding:0 5px">
+      <button class="key" data-k="a">a</button><button class="key" data-k="s">s</button><button class="key" data-k="d">d</button><button class="key" data-k="f">f</button><button class="key" data-k="g">g</button><button class="key" data-k="h">h</button><button class="key" data-k="j">j</button><button class="key" data-k="k">k</button><button class="key" data-k="l">l</button>
+    </div>
+    <div class="kbd-row">
+      <button class="key wide" id="kbd-shift">&#8679;</button>
+      <button class="key" data-k="z">z</button><button class="key" data-k="x">x</button><button class="key" data-k="c">c</button><button class="key" data-k="v">v</button><button class="key" data-k="b">b</button><button class="key" data-k="n">n</button><button class="key" data-k="m">m</button>
+      <button class="key wide" id="kbd-back">&#9003;</button>
+    </div>
+    <div class="kbd-row">
+      <button class="key wide" id="kbd-sym">?123</button>
+      <button class="key" id="kbd-emoji">😊</button>
+      <button class="key space" id="kbd-space">space</button>
+      <button class="key" data-k=".">.</button>
+      <button class="key wide action" id="kbd-enter">&#9166;</button>
+    </div>
+  </div>
 </div>
 
 <!-- Recording Overlay (floats above chat view) -->
@@ -487,6 +664,12 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Emoji picker -->
+<div id="emoji-backdrop"></div>
+<div id="emoji-picker"><div class="emoji-grid" id="emoji-grid"></div></div>
+
+</div><!-- #app -->
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <!-- SCRIPT                                                             -->
@@ -535,6 +718,7 @@ let lastSeenMsgId = 0;
 let recognition = null;
 let ws = null;
 let refreshTimer = null;
+let isLandscape = false;
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
@@ -566,6 +750,19 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
+function populateComposeHistory() {
+  const el = document.getElementById('compose-history');
+  if (!el) return;
+  const recent = messages.slice(-8);
+  if (!recent.length) { el.innerHTML = ''; return; }
+  el.innerHTML = recent.map(m => `
+    <div class="msg-bubble ${m.out ? 'out' : 'in'}">
+      ${!m.out ? `<div class="msg-sender">${esc(m.senderName)}</div>` : ''}
+      <div>${esc(m.text || '')}</div>
+    </div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
 function showScreen(name) {
   currentScreen = name;
   screenList.classList.toggle('active', name === 'list');
@@ -573,6 +770,7 @@ function showScreen(name) {
   screenConfirm.classList.toggle('active', name === 'confirm');
   screenSetup.classList.toggle('active', name === 'setup');
   screenCompose.classList.toggle('active', name === 'compose');
+  if (name === 'compose') { populateComposeHistory(); setTimeout(() => composeDisplay.focus(), 50); }
 }
 
 function setConnStatus(state) {
@@ -724,6 +922,28 @@ async function openChat(chat) {
   }
 }
 
+function addReactionToMessage(msgId, emoji) {
+  const bubble = msgsListEl.querySelector('.msg-bubble[data-msgid="' + msgId + '"]');
+  if (!bubble) return;
+  let reactionsEl = bubble.querySelector('.msg-reactions');
+  if (!reactionsEl) {
+    reactionsEl = document.createElement('div');
+    reactionsEl.className = 'msg-reactions';
+    const timeEl = bubble.querySelector('.msg-time');
+    timeEl ? bubble.insertBefore(reactionsEl, timeEl) : bubble.appendChild(reactionsEl);
+  }
+  const existing = [...reactionsEl.querySelectorAll('.msg-reaction')].find(el => el.textContent.trim().startsWith(emoji));
+  if (existing) {
+    const n = parseInt(existing.textContent.trim().split(' ').pop()) || 1;
+    existing.textContent = emoji + ' ' + (n + 1);
+  } else {
+    const span = document.createElement('span');
+    span.className = 'msg-reaction';
+    span.textContent = emoji + ' 1';
+    reactionsEl.appendChild(span);
+  }
+}
+
 function renderMessages() {
   if (!messages.length) {
     msgsListEl.innerHTML = '<div class="state-msg">No messages yet</div>';
@@ -734,11 +954,22 @@ function renderMessages() {
     const photoTag = m.hasPhoto
       ? `<img src="${CONFIG.backendUrl}/chats/${currentChatId}/messages/${m.id}/photo?token=${encodeURIComponent(CONFIG.authToken)}" style="max-width:100%;border-radius:5px;margin-top:3px;display:block;" loading="lazy">`
       : '';
+    const audioTag = m.hasAudio
+      ? `<div class="audio-player" data-url="${CONFIG.backendUrl}/chats/${currentChatId}/messages/${m.id}/audio?token=${encodeURIComponent(CONFIG.authToken)}"><span class="audio-play-btn">▶</span><span class="audio-label">${esc(m.audioName || (m.isVoice ? 'Voice Message' : 'Audio'))}</span></div>`
+      : '';
+    const replyTag = m.replyTo
+      ? `<div class="msg-reply"><span class="msg-reply-author">${esc(m.replyTo.author)}</span>${esc(m.replyTo.text)}</div>`
+      : '';
+    const reactTag = (m.reactions?.length)
+      ? `<div class="msg-reactions">${m.reactions.map(r => `<span class="msg-reaction">${r.emoji} ${r.count}</span>`).join('')}</div>`
+      : '';
     return `
-    <div class="msg-bubble ${m.out ? 'out' : 'in'}${m.hasPhoto ? ' has-photo' : ''}">
+    <div class="msg-bubble ${m.out ? 'out' : 'in'}${m.hasPhoto ? ' has-photo' : ''}" data-msgid="${m.id}">
       ${!m.out ? `<div class="msg-sender">${esc(m.senderName)}</div>` : ''}
+      ${replyTag}
       ${m.text ? `<div>${mdToHtml(m.text)}</div>` : ''}
-      ${photoTag}
+      ${photoTag}${audioTag}
+      ${reactTag}
       <div class="msg-time">${formatTime(m.date)}</div>
     </div>
   `;
@@ -1231,19 +1462,28 @@ $('#btn-read-all').addEventListener('click', async () => {
 $('#btn-tts').addEventListener('click', toggleTTS);
 $('#btn-discard').addEventListener('click', () => showScreen('chat'));
 $('#btn-confirm-send').addEventListener('click', sendMessage);
-$('#btn-keyboard').addEventListener('click', () => {
-  const input = $('#compose-input');
-  input.value = '';
-  showScreen('compose');
-  setTimeout(() => input.focus(), 80);
-});
-$('#btn-compose-cancel').addEventListener('click', () => {
-  showScreen('chat');
-});
-$('#btn-compose-send').addEventListener('click', async () => {
-  const text = $('#compose-input').value.trim();
+const composeDisplay = document.getElementById('compose-display');
+
+function insertAtCursor(text) {
+  composeDisplay.focus();
+  document.execCommand('insertText', false, text);
+}
+function deleteAtCursor() {
+  composeDisplay.focus();
+  document.execCommand('delete');
+}
+function clearCompose() {
+  composeDisplay.innerHTML = '';
+  composeDisplay.focus();
+}
+function getCompose() {
+  return (composeDisplay.innerText || '').trim();
+}
+
+async function sendCompose() {
+  const text = getCompose();
   if (!text || !currentChatId) return;
-  $('#compose-input').value = '';
+  clearCompose();
   toast('Sending…');
   showScreen('chat');
   try {
@@ -1257,7 +1497,192 @@ $('#btn-compose-send').addEventListener('click', async () => {
   } catch (err) {
     toast('Send failed');
   }
+}
+
+$('#btn-keyboard').addEventListener('click', () => {
+  clearCompose();
+  showScreen('compose');
 });
+$('#btn-compose-cancel').addEventListener('click', () => {
+  clearCompose();
+  showScreen('chat');
+});
+$('#kbd-dismiss-btn').addEventListener('click', () => { showScreen('chat'); });
+$('#btn-compose-send').addEventListener('click', sendCompose);
+
+// ─── DOM Keyboard logic ────────────────────────────────────────────────────
+(function() {
+  let shifted = false;
+  let symMode = false;
+
+  const letters = [
+    ['q','w','e','r','t','y','u','i','o','p'],
+    ['a','s','d','f','g','h','j','k','l'],
+    ['z','x','c','v','b','n','m']
+  ];
+  const symbols = [
+    ['1','2','3','4','5','6','7','8','9','0'],
+    ['-','/',':',';','(',')','$','&','@','"'],
+    ['.',',','?','!','\'']
+  ];
+
+  function applyShift() {
+    document.querySelectorAll('.key[data-k]').forEach(k => {
+      const v = k.dataset.k;
+      if (v.length === 1 && v >= 'a' && v <= 'z') k.textContent = shifted ? v.toUpperCase() : v;
+    });
+    const s = document.getElementById('kbd-shift');
+    if (s) s.classList.toggle('shifted', shifted);
+  }
+
+  function applySymMode() {
+    const allRows = document.querySelectorAll('.kbd-row');
+    const symBtn  = document.getElementById('kbd-sym');
+    if (symMode) {
+      [0,1,2].forEach(r => {
+        const keys = allRows[r] && allRows[r].querySelectorAll('.key[data-k]');
+        if (keys) keys.forEach((k,i) => { const s = (symbols[r]||[])[i]; if (s !== undefined) { k.dataset.k = s; k.textContent = s; }});
+      });
+      if (symBtn) symBtn.textContent = 'ABC';
+    } else {
+      [0,1,2].forEach(r => {
+        const keys = allRows[r] && allRows[r].querySelectorAll('.key[data-k]');
+        if (keys) keys.forEach((k,i) => { const l = (letters[r]||[])[i]; if (l !== undefined) { k.dataset.k = l; k.textContent = shifted ? l.toUpperCase() : l; }});
+      });
+      if (symBtn) symBtn.textContent = '?123';
+    }
+  }
+
+  document.getElementById('virtual-keyboard').addEventListener('click', function(e) {
+    const key = e.target.closest('.key');
+    if (!key) return;
+    const id = key.id, v = key.dataset.k;
+    if (id === 'kbd-shift') {
+      shifted = !shifted; symMode = false; applyShift();
+    } else if (id === 'kbd-sym') {
+      symMode = !symMode; applySymMode();
+    } else if (id === 'kbd-back') {
+      deleteAtCursor();
+    } else if (id === 'kbd-space') {
+      insertAtCursor(' ');
+    } else if (id === 'kbd-enter') {
+      sendCompose();
+    } else if (id === 'kbd-emoji') {
+      openEmojiPicker();
+    } else if (v) {
+      const ch = (shifted && !symMode) ? v.toUpperCase() : v;
+      insertAtCursor(ch);
+      if (shifted && !symMode) { shifted = false; applyShift(); }
+    }
+  });
+})();
+
+// ─── Emoji picker ─────────────────────────────────────────────────────────
+(function() {
+  const EMOJIS = [
+    '👍','👎','❤️','😂','😮','😢','😡','🔥','✅','👀','🎉','💯',
+    '😊','😎','🤔','😅','😭','🥲','🤣','😍','😤','🤯','😴','🥳',
+    '🙏','👋','💪','🤝','👏','🙌','⭐','💀','💥','🏆','🎯','💩',
+    '🫡','🫠','🐐','🍕','❓','💬','🎵','🎮','📸','🤖','👑','🌟',
+  ];
+  const picker   = document.getElementById('emoji-picker');
+  const backdrop = document.getElementById('emoji-backdrop');
+  const grid     = document.getElementById('emoji-grid');
+
+  grid.innerHTML = EMOJIS.map(e => `<button class="emoji-btn" data-e="${e}">${e}</button>`).join('');
+
+  let emojiMode  = 'insert';
+  let reactMsgId = null;
+
+  function closePicker() {
+    picker.classList.remove('open');
+    backdrop.classList.remove('open');
+    emojiMode = 'insert'; reactMsgId = null;
+  }
+
+  window.openEmojiPicker = function(mode, msgId) {
+    emojiMode  = mode || 'insert';
+    reactMsgId = msgId || null;
+    picker.classList.add('open');
+    backdrop.classList.add('open');
+    picker.scrollTop = 0;
+  };
+
+  backdrop.addEventListener('click', closePicker);
+
+  grid.addEventListener('click', function(e) {
+    const btn = e.target.closest('.emoji-btn');
+    if (!btn) return;
+    const emoji = btn.dataset.e;
+    if (emojiMode === 'react' && reactMsgId) {
+      const msgId = reactMsgId;
+      closePicker();
+      api('/chats/' + currentChatId + '/messages/' + msgId + '/react', {
+        method: 'POST', body: JSON.stringify({ emoji }),
+      }).then(() => addReactionToMessage(msgId, emoji))
+        .catch(() => toast('React failed'));
+      return;
+    }
+    insertAtCursor(emoji);
+    closePicker();
+  });
+})();
+
+// ─── Audio playback ────────────────────────────────────────────────────────
+(function() {
+  let activeAudio  = null;
+  let activePlayer = null;
+
+  function stopCurrent() {
+    if (activeAudio)  { activeAudio.pause(); activeAudio = null; }
+    if (activePlayer) { activePlayer.classList.remove('playing'); activePlayer.querySelector('.audio-play-btn').textContent = '▶'; activePlayer = null; }
+  }
+
+  msgsListEl.addEventListener('click', function(e) {
+    const player = e.target.closest('.audio-player');
+    if (!player) return;
+    const url = player.dataset.url;
+    if (!url) return;
+    if (player === activePlayer) {
+      if (activeAudio.paused) { activeAudio.play(); player.querySelector('.audio-play-btn').textContent = '⏸'; }
+      else                    { activeAudio.pause(); player.querySelector('.audio-play-btn').textContent = '▶'; }
+      return;
+    }
+    stopCurrent();
+    const audio = new Audio(url);
+    activeAudio = audio; activePlayer = player;
+    player.classList.add('playing');
+    player.querySelector('.audio-play-btn').textContent = '⏸';
+    audio.play();
+    audio.onended = stopCurrent;
+  });
+})();
+
+// ─── Long-press to react ───────────────────────────────────────────────────
+(function() {
+  let lpTimer     = null;
+  let lpTriggered = false;
+
+  msgsListEl.addEventListener('touchstart', function(e) {
+    const bubble = e.target.closest('.msg-bubble[data-msgid]');
+    if (!bubble || e.target.closest('.audio-player')) return;
+    const msgId = bubble.dataset.msgid;
+    if (!msgId) return;
+    lpTriggered = false;
+    lpTimer = setTimeout(function() {
+      lpTriggered = true;
+      openEmojiPicker('react', msgId);
+    }, 600);
+  }, { passive: true });
+
+  msgsListEl.addEventListener('touchmove',   function() { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
+  msgsListEl.addEventListener('touchend',    function() { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
+  msgsListEl.addEventListener('touchcancel', function() { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
+
+  msgsListEl.addEventListener('click', function(e) {
+    if (lpTriggered) { lpTriggered = false; e.stopImmediatePropagation(); }
+  }, true);
+})();
 
 // Setup screen save button
 $('#btn-setup-save').addEventListener('click', () => {
@@ -1270,6 +1695,73 @@ $('#btn-setup-save').addEventListener('click', () => {
   localStorage.setItem('r1tg_token', token);
   startApp();
 });
+
+// ─── Landscape Rotation ───────────────────────────────────────────────
+(async function() {
+  const appEl = document.getElementById('app');
+
+  function setLandscape(on) {
+    if (on === isLandscape) return;
+    isLandscape = on;
+    appEl.classList.toggle('landscape', on);
+    document.body.classList.toggle('in-landscape', on);
+  }
+
+  function handleMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const ax = Math.abs(a.x || 0);
+    if (!isLandscape && ax > 7) setLandscape(true);
+    else if (isLandscape && ax < 4) setLandscape(false);
+  }
+
+  if (typeof window.creationSensors !== 'undefined') {
+    try {
+      const available = await window.creationSensors.accelerometer.isAvailable();
+      if (available) {
+        const cb = function(data) {
+          const ax = Math.abs(data.x || 0);
+          if (!isLandscape && ax > 0.7) setLandscape(true);
+          else if (isLandscape && ax < 0.4) setLandscape(false);
+        };
+        window.creationSensors.accelerometer.start(cb, { frequency: 10 });
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) window.creationSensors.accelerometer.stop();
+          else window.creationSensors.accelerometer.start(cb, { frequency: 10 });
+        });
+        return;
+      }
+    } catch(e) {}
+  }
+  if (typeof DeviceMotionEvent !== 'undefined') {
+    window.addEventListener('devicemotion', handleMotion);
+  }
+})();
+
+// ─── Landscape Touch-Scroll Remapping ────────────────────────────────
+(function() {
+  let touchStartX = 0;
+
+  function activeScrollArea() {
+    if (currentScreen === 'list') return document.getElementById('chat-list');
+    if (currentScreen === 'chat') return document.getElementById('messages-list');
+    return null;
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!isLandscape) return;
+    const sa = activeScrollArea();
+    if (!sa) return;
+    e.preventDefault();
+    const dx = e.touches[0].clientX - touchStartX;
+    sa.scrollTop -= dx * 1.5;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: false });
+})();
 
 // ─── Init ─────────────────────────────────────────────────────────────
 async function startApp() {

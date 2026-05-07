@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { TelegramClient } from 'telegram';
+import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
 import { NewMessage } from 'telegram/events/index.js';
 import { readFileSync, existsSync } from 'fs';
@@ -30,6 +30,20 @@ const telegram = new TelegramClient(session, API_ID, API_HASH, { connectionRetri
 
 let clientReady = false;
 
+function getAudioInfo(m) {
+  const doc = m.media?.document;
+  if (!doc) return null;
+  const attrs = doc.attributes || [];
+  const audio = attrs.find(a => a.className === 'DocumentAttributeAudio');
+  if (!audio) return null;
+  const fname = attrs.find(a => a.className === 'DocumentAttributeFilename');
+  return { isVoice: !!audio.voice, name: audio.voice ? 'Voice Message' : (fname?.fileName || 'Audio') };
+}
+
+function getReactions(m) {
+  return (m.reactions?.results || []).map(r => ({ emoji: r.reaction?.emoticon || '?', count: r.count }));
+}
+
 async function connectTelegram() {
   await telegram.connect();
   clientReady = true;
@@ -40,6 +54,7 @@ async function connectTelegram() {
     if (!msg) return;
     const sender = await msg.getSender();
     const chatId = msg.chatId?.toString();
+    const ai = getAudioInfo(msg);
     broadcastWS({
       type: 'new_message',
       chatId,
@@ -52,6 +67,9 @@ async function connectTelegram() {
           ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') || sender.title || 'Unknown'
           : 'Unknown',
         hasPhoto:   !!msg.media?.photo,
+        hasAudio:   !!ai,
+        isVoice:    ai?.isVoice || false,
+        audioName:  ai?.name || '',
       },
     });
   }, new NewMessage({}));
@@ -111,14 +129,41 @@ app.get('/chats/:id/messages', auth, async (req, res) => {
     const limit    = Math.min(parseInt(req.query.limit) || 20, 50);
     const entity   = await telegram.getEntity(req.params.id);
     const messages = await telegram.getMessages(entity, { limit });
-    const result   = [];
+
+    // Batch-fetch reply source messages
+    const replyIds = [...new Set(messages.filter(m => m.replyTo?.replyToMsgId).map(m => m.replyTo.replyToMsgId))];
+    const replyMap = {};
+    if (replyIds.length) {
+      try {
+        const refs = await telegram.getMessages(entity, { ids: replyIds });
+        for (const rm of refs.filter(Boolean)) {
+          try {
+            const rs = await rm.getSender();
+            const rName = rs ? ([rs.firstName, rs.lastName].filter(Boolean).join(' ') || rs.title || 'Unknown') : 'Unknown';
+            replyMap[rm.id] = { author: rName, text: (rm.text || '').slice(0, 60) };
+          } catch {}
+        }
+      } catch {}
+    }
+
+    const result = [];
     for (const m of messages) {
       let senderName = 'Unknown';
       try {
         const s = await m.getSender();
         if (s) senderName = [s.firstName, s.lastName].filter(Boolean).join(' ') || s.title || 'Unknown';
       } catch {}
-      result.push({ id: m.id, text: m.text || '', date: m.date, out: m.out, senderName, hasPhoto: !!m.media?.photo });
+      const ai = getAudioInfo(m);
+      const replyId = m.replyTo?.replyToMsgId;
+      result.push({
+        id: m.id, text: m.text || '', date: m.date, out: m.out, senderName,
+        hasPhoto:  !!m.media?.photo,
+        hasAudio:  !!ai,
+        isVoice:   ai?.isVoice || false,
+        audioName: ai?.name || '',
+        replyTo:   replyId && replyMap[replyId] ? replyMap[replyId] : null,
+        reactions: getReactions(m),
+      });
     }
     result.reverse();
     res.json({ messages: result });
@@ -138,6 +183,41 @@ app.post('/chats/:id/send', auth, async (req, res) => {
     res.json({ ok: true, messageId: sent.id });
   } catch (err) {
     console.error('POST /chats/:id/send error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /chats/:chatId/messages/:msgId/audio ────────────────────────
+app.get('/chats/:chatId/messages/:msgId/audio', auth, async (req, res) => {
+  try {
+    const entity = await telegram.getEntity(req.params.chatId);
+    const msgs   = await telegram.getMessages(entity, { ids: [parseInt(req.params.msgId)] });
+    if (!msgs[0]?.media?.document) return res.status(404).send('No audio');
+    const buffer   = await telegram.downloadMedia(msgs[0]);
+    const mimeType = msgs[0].media.document.mimeType || 'audio/ogg';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('GET audio error:', err.message);
+    res.status(500).send(err.message);
+  }
+});
+
+// ─── POST /chats/:chatId/messages/:msgId/react ────────────────────────
+app.post('/chats/:chatId/messages/:msgId/react', auth, async (req, res) => {
+  const { emoji } = req.body;
+  if (!emoji) return res.status(400).json({ error: 'Missing emoji' });
+  try {
+    const entity = await telegram.getEntity(req.params.chatId);
+    await telegram.invoke(new Api.messages.SendReaction({
+      peer:     entity,
+      msgId:    parseInt(req.params.msgId),
+      reaction: [new Api.ReactionEmoji({ emoticon: emoji })],
+    }));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST react error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
