@@ -6,6 +6,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
 import { NewMessage } from 'telegram/events/index.js';
+import { registerAgentBridgeRoutes } from './server/agentBridge.js';
+
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -338,9 +340,13 @@ function broadcastWS(data) {
   for (const ws of wsClients) if (ws.readyState === WebSocket.OPEN) ws.send(json);
 }
 
+
+// ─── Agent Bridge ────────────────────────────────────────────────────
+
 // ─── Start ───────────────────────────────────────────────────────────
 (async () => {
   await connectTelegram();
+  registerAgentBridgeRoutes(app, telegram);
   server.listen(PORT, () => {
     const t = AUTH_TOKEN ? `&token=${encodeURIComponent(AUTH_TOKEN)}` : '';
     console.log(`
