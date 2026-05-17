@@ -81,6 +81,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
   }
   .header .back {
     font-size: 26px;
@@ -146,6 +148,9 @@
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
   }
 
   .chat-info {
@@ -873,7 +878,7 @@ function renderChatList() {
 
   chatListEl.innerHTML = chats.map((c, i) => `
     <div class="chat-item ${i === selectedIdx ? 'selected' : ''}" data-idx="${i}">
-      <div class="chat-avatar" style="background:${avatarColor(c.name)}">${(c.name[0] || '?').toUpperCase()}</div>
+      <div class="chat-avatar" ${c.hasPhoto ? `style="background-image: url(/chats/${c.id}/photo?token=${new URL(location.href).searchParams.get('token') || ''}); background-size: cover; background-position: center"` : `style="background:${avatarColor(c.name)}"` }>${!c.hasPhoto ? (c.name[0] || '?').toUpperCase() : ''}</div>
       <div class="chat-info">
         <div class="chat-name">${esc(c.name)}</div>
         <div class="chat-preview">${esc(c.lastMessage)}</div>
@@ -903,7 +908,14 @@ function renderChatList() {
 async function openChat(chat) {
   currentChatId = chat.id;
   currentChatName = chat.name;
-  chatTitle.textContent = chat.name;
+  
+  // Update header with photo and name
+  const token = new URL(location.href).searchParams.get('token') || '';
+  chatTitle.innerHTML = `
+    ${chat.hasPhoto ? `<img src="/chats/${chat.id}/photo?token=${token}" alt="" style="width:24px;height:24px;border-radius:50%;margin-right:8px;vertical-align:middle;">` : ''}
+    <span>${esc(chat.name)}</span>
+  `;
+  
   showScreen('chat');
 
   msgsListEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>Loading…</div>';
@@ -1289,7 +1301,7 @@ function handleLiveMessage(data) {
     messages.push(data.message);
     lastSeenMsgId = Math.max(lastSeenMsgId, data.message.id);
     renderMessages();
-    if (!data.message.out) speak(data.message.text);
+    if (!data.message.out) { playPing(); speak(data.message.text); }
   }
 
   if (currentScreen === 'list') {
@@ -1308,7 +1320,7 @@ function startChatPolling() {
       for (const m of incoming) {
         messages.push(m);
         lastSeenMsgId = Math.max(lastSeenMsgId, m.id);
-        if (!m.out) speak(m.text);
+        if (!m.out) { playPing(); speak(m.text); }
       }
       renderMessages();
     } catch {}
@@ -1321,6 +1333,7 @@ function stopChatPolling() {
 
 // ─── Input Handlers ───────────────────────────────────────────────────
 function handleScroll(direction) {
+  playTick()
   if (currentScreen === 'list') {
     if (direction === 'up' && selectedIdx > 0) selectedIdx--;
     if (direction === 'down' && selectedIdx < chats.length - 1) selectedIdx++;
@@ -1811,6 +1824,79 @@ async function startApp() {
     await startApp();
   }
 })();
+
+
+
+// ─── Sound Effects ─────────────────────────────────────────────────────
+let _audioCtx = null
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  if (_audioCtx.state === 'suspended') _audioCtx.resume()
+  return _audioCtx
+}
+
+// Unlock AudioContext on first user gesture (browser requirement)
+;(function unlockAudio() {
+  const unlock = () => {
+    getAudioCtx()
+    document.removeEventListener('touchstart', unlock, true)
+    document.removeEventListener('touchend',   unlock, true)
+    document.removeEventListener('click',      unlock, true)
+  }
+  document.addEventListener('touchstart', unlock, true)
+  document.addEventListener('touchend',   unlock, true)
+  document.addEventListener('click',      unlock, true)
+})()
+
+function playTick() {
+  try {
+    const ctx = getAudioCtx()
+    const t = ctx.currentTime
+    // Noise burst — bandpass around 900Hz for a lower, poppier click
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.03, ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1)
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(900, t)
+    filter.Q.value = 1.5
+    const gain = ctx.createGain()
+    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
+    gain.gain.setValueAtTime(0.35, t)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03)
+    src.start(t)
+  } catch (_) {}
+}
+
+function playPing() {
+  try {
+    const ctx = getAudioCtx()
+    const t = ctx.currentTime
+
+    // Glimmery crystal partials — fast arpeggio, detuned sine pairs, long shimmer tails
+    const gems = [
+      [0.00, 1568, 1.000, 0.30],
+      [0.03, 2093, 0.960, 0.26],
+      [0.06, 2637, 0.920, 0.22],
+      [0.09, 1319, 0.880, 0.20],
+    ]
+    gems.forEach(([delay, freq, detune, dur]) => {
+      [freq, freq * detune].forEach(f => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(f, t + delay)
+        gain.gain.setValueAtTime(0.0, t + delay)
+        gain.gain.linearRampToValueAtTime(0.08, t + delay + 0.008)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + delay + dur)
+        osc.start(t + delay); osc.stop(t + delay + dur + 0.02)
+      })
+    })
+  } catch (_) {}
+}
 
 </script>
 </body>
