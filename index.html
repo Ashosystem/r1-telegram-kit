@@ -427,28 +427,19 @@
   }
 
   /* ─── DOM Keyboard ────────────────────────────────────────────── */
-  #compose-history {
+  #screen-compose #compose-history { display: none; }
+  #compose-area {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 8px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    border-bottom: 1px solid #2a2a2a;
-  }
-  #compose-history::-webkit-scrollbar { width: 2px; }
-  #compose-history::-webkit-scrollbar-thumb { background: #333; }
-  #compose-history .msg-bubble { font-size: 9px; padding: 3px 6px; pointer-events: none; }
-  #compose-history .msg-sender { font-size: 8px; }
-  #compose-history .msg-time { display: none; }
-  #compose-area {
-    flex-shrink: 0;
     position: relative;
-    margin: 3px 8px 3px;
+    margin: 4px 8px;
+    min-height: 0;
   }
   #compose-display {
-    height: 36px;
+    flex: 1;
+    min-height: 0;
     background: var(--surface);
     border-radius: 6px;
     padding: 5px 22px 5px 8px;
@@ -459,6 +450,13 @@
     color: var(--text);
     border: 1px solid #2a2a2a;
   }
+  /* Landscape: tighter keyboard and history strip */
+  body.in-landscape .key { min-height: 18px; font-size: 9px; }
+  body.in-landscape #virtual-keyboard { padding: 0 4px 1px; gap: 0; }
+  body.in-landscape .kbd-row { gap: 1px; }
+  body.in-landscape #screen-compose.stt-mode #compose-history { max-height: 24px; }
+
+  /* STT edit mode: compose-area already fills space; no extra overrides needed */
   #compose-display:empty::before { content: 'Type a message…'; color: var(--text-dim); pointer-events: none; }
   #compose-display:focus { outline: none; }
   #compose-display { caret-color: var(--accent); }
@@ -571,7 +569,7 @@
   <div class="header">
     <div class="back" id="btn-back">‹</div>
     <div class="title" id="chat-title">Chat</div>
-    <div id="btn-tts" style="font-size:14px;cursor:pointer;padding:2px 4px;opacity:0.5;" title="Toggle TTS">🔇</div>
+    <button id="btn-tts" style="font-size:14px;cursor:pointer;padding:6px 8px;opacity:0.5;background:none;border:none;color:inherit;touch-action:manipulation;min-width:30px;" title="Toggle TTS">🔇</button>
     <div id="btn-keyboard" style="font-size:13px;cursor:pointer;padding:2px 4px;opacity:0.7;" title="Type message">⌨️</div>
   </div>
   <div class="messages-list" id="messages-list"></div>
@@ -1184,8 +1182,16 @@ async function stopRecording() {
 
 // ─── Confirm & Send ───────────────────────────────────────────────────
 function showConfirm(text) {
-  confirmText.textContent = text;
-  showScreen('confirm');
+  clearCompose();
+  composeDisplay.innerText = text;
+  const range = document.createRange();
+  const sel = window.getSelection();
+  range.selectNodeContents(composeDisplay);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  screenCompose.classList.add('stt-mode');
+  showScreen('compose');
 }
 
 async function sendMessage() {
@@ -1249,6 +1255,7 @@ function connectWS() {
 
 // ─── TTS Module ───────────────────────────────────────────────────────
 let ttsEnabled = false;
+let ttsVolume = 1.0;
 let ttsAudio = null;
 
 function speak(text) {
@@ -1276,12 +1283,15 @@ function speak(text) {
       const blob = await r.blob();
       const audioUrl = URL.createObjectURL(blob);
       ttsAudio = new Audio(audioUrl);
+      ttsAudio.volume = ttsVolume;
       ttsAudio.play();
       ttsAudio.onended = () => { URL.revokeObjectURL(audioUrl); ttsAudio = null; };
     } catch {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.volume = ttsVolume;
+        window.speechSynthesis.speak(utt);
       }
     }
   })();
@@ -1290,15 +1300,20 @@ function speak(text) {
 
 function toggleTTS() {
   ttsEnabled = !ttsEnabled;
+  ttsVolume = ttsEnabled ? 1.0 : 0.0;
   const btn = $('#btn-tts');
   btn.textContent = ttsEnabled ? '🔊' : '🔇';
   btn.style.opacity = ttsEnabled ? '1' : '0.5';
-  if (!ttsEnabled) { ttsAudio?.pause(); ttsAudio = null; window.speechSynthesis?.cancel(); }
+  // Mute any currently playing audio immediately
+  if (ttsAudio) ttsAudio.volume = ttsVolume;
+  if (!ttsEnabled) window.speechSynthesis?.cancel();
 }
 
 function handleLiveMessage(data) {
   if (currentScreen === 'chat' && data.chatId === currentChatId) {
-    messages.push(data.message);
+    if (!messages.some(m => m.id === data.message.id)) {
+      messages.push(data.message);
+    }
     lastSeenMsgId = Math.max(lastSeenMsgId, data.message.id);
     renderMessages();
     if (!data.message.out) { playPing(); speak(data.message.text); }
@@ -1414,6 +1429,8 @@ window.addEventListener('sideClick', () => {
     handleSelect();
   } else if (currentScreen === 'confirm') {
     handleSelect();
+  } else if (currentScreen === 'compose') {
+    sendCompose();
   }
   // On chat screen: intentionally do nothing — hold the button for STT.
 });
@@ -1497,14 +1514,17 @@ async function sendCompose() {
   const text = getCompose();
   if (!text || !currentChatId) return;
   clearCompose();
+  screenCompose.classList.remove('stt-mode');
   toast('Sending…');
   showScreen('chat');
   try {
-    await api('/chats/' + currentChatId + '/send', {
+    const result = await api('/chats/' + currentChatId + '/send', {
       method: 'POST',
       body: JSON.stringify({ text }),
     });
-    messages.push({ id: Date.now(), text, date: Math.floor(Date.now()/1000), out: true, senderName: 'You' });
+    const sentId = result.messageId || Date.now();
+    lastSeenMsgId = Math.max(lastSeenMsgId, sentId);
+    messages.push({ id: sentId, text, date: Math.floor(Date.now()/1000), out: true, senderName: 'You' });
     renderMessages();
     toast('Sent ✓');
   } catch (err) {
@@ -1518,6 +1538,7 @@ $('#btn-keyboard').addEventListener('click', () => {
 });
 $('#btn-compose-cancel').addEventListener('click', () => {
   clearCompose();
+  screenCompose.classList.remove('stt-mode');
   showScreen('chat');
 });
 $('#kbd-dismiss-btn').addEventListener('click', () => { showScreen('chat'); });
