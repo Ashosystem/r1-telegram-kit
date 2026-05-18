@@ -31,6 +31,7 @@ const session  = new StringSession(SESSION_STR);
 const telegram = new TelegramClient(session, API_ID, API_HASH, { connectionRetries: 5 });
 
 let clientReady = false;
+const profilePhotoCache = new Map(); // Cache: chatId -> photo buffer
 
 function getAudioInfo(m) {
   const doc = m.media?.document;
@@ -44,6 +45,40 @@ function getAudioInfo(m) {
 
 function getReactions(m) {
   return (m.reactions?.results || []).map(r => ({ emoji: r.reaction?.emoticon || '?', count: r.count }));
+}
+
+async function getProfilePhoto(entity) {
+  try {
+    const chatId = entity.id?.toString();
+    if (!chatId) return null;
+    
+    // Check cache first
+    if (profilePhotoCache.has(chatId)) {
+      return profilePhotoCache.get(chatId);
+    }
+    
+    // Try to get full entity with photo info
+    const fullEntity = await telegram.getEntity(entity.id);
+    if (!fullEntity?.photo) return null;
+    
+    // Download the profile photo - use the proper method
+    let buffer;
+    try {
+      buffer = await telegram.downloadProfilePhoto(entity.id, { isBig: false });
+    } catch (e) {
+      // Fallback to downloadMedia if downloadProfilePhoto not available
+      buffer = await telegram.downloadMedia(fullEntity.photo);
+    }
+    
+    if (buffer) {
+      profilePhotoCache.set(chatId, buffer);
+      return buffer;
+    }
+    return null;
+  } catch (err) {
+    console.warn(`Failed to fetch profile photo for ${chatId}:`, err.message);
+    return null;
+  }
 }
 
 async function connectTelegram() {
@@ -99,6 +134,8 @@ function serveFile(filename) {
     res.send(readFileSync(f));
   };
 }
+
+app.use('/app', express.static('/home/openclaw/agent-bridge-dist'));
 app.get('/',        serveFile('index.html'));
 app.get('/index.html',  serveFile('index.html'));
 app.get('/harness', serveFile('harness.html'));
@@ -110,18 +147,44 @@ app.get('/health', (_req, res) => res.json({ ok: true, telegram: clientReady }))
 app.get('/chats', auth, async (_req, res) => {
   try {
     const dialogs = await telegram.getDialogs({ limit: 30, archived: false });
-    res.json({ chats: dialogs.map((d) => ({
-      id:          d.id?.toString(),
-      name:        d.title || d.name || 'Unknown',
-      unread:      d.unreadCount || 0,
-      lastMessage: d.message?.text?.slice(0, 80) || '',
-      lastDate:    d.message?.date || 0,
-      isGroup:     !!d.isGroup,
-      isChannel:   !!d.isChannel,
-    }))});
+    const chats = [];
+    
+    for (const d of dialogs) {
+      chats.push({
+        id:          d.id?.toString(),
+        name:        d.title || d.name || 'Unknown',
+        unread:      d.unreadCount || 0,
+        lastMessage: d.message?.text?.slice(0, 80) || '',
+        lastDate:    d.message?.date || 0,
+        isGroup:     !!d.isGroup,
+        isChannel:   !!d.isChannel,
+        hasPhoto:    true,
+      });
+    }
+    
+    res.json({ chats });
   } catch (err) {
     console.error('GET /chats error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /chats/:id/photo ───────────────────────────────────────────
+app.get('/chats/:id/photo', auth, async (req, res) => {
+  try {
+    const entity = await telegram.getEntity(req.params.id);
+    const buffer = await getProfilePhoto(entity);
+    
+    if (!buffer) {
+      return res.status(404).send('No profile photo');
+    }
+    
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('GET /chats/:id/photo error:', err.message);
+    res.status(500).send(err.message);
   }
 });
 
