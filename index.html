@@ -427,28 +427,19 @@
   }
 
   /* ─── DOM Keyboard ────────────────────────────────────────────── */
-  #compose-history {
+  #screen-compose #compose-history { display: none; }
+  #compose-area {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 8px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    border-bottom: 1px solid #2a2a2a;
-  }
-  #compose-history::-webkit-scrollbar { width: 2px; }
-  #compose-history::-webkit-scrollbar-thumb { background: #333; }
-  #compose-history .msg-bubble { font-size: 9px; padding: 3px 6px; pointer-events: none; }
-  #compose-history .msg-sender { font-size: 8px; }
-  #compose-history .msg-time { display: none; }
-  #compose-area {
-    flex-shrink: 0;
     position: relative;
-    margin: 3px 8px 3px;
+    margin: 4px 8px;
+    min-height: 0;
   }
   #compose-display {
-    height: 36px;
+    flex: 1;
+    min-height: 0;
     background: var(--surface);
     border-radius: 6px;
     padding: 5px 22px 5px 8px;
@@ -465,10 +456,7 @@
   body.in-landscape .kbd-row { gap: 1px; }
   body.in-landscape #screen-compose.stt-mode #compose-history { max-height: 24px; }
 
-  /* STT edit mode: small history strip, text area fills remaining space */
-  #screen-compose.stt-mode #compose-history { flex: 0 0 auto; max-height: 44px; min-height: 0; }
-  #screen-compose.stt-mode #compose-area { flex: 1; display: flex; flex-direction: column; margin: 6px 8px; }
-  #screen-compose.stt-mode #compose-display { flex: 1; height: auto; min-height: 0; }
+  /* STT edit mode: compose-area already fills space; no extra overrides needed */
   #compose-display:empty::before { content: 'Type a message…'; color: var(--text-dim); pointer-events: none; }
   #compose-display:focus { outline: none; }
   #compose-display { caret-color: var(--accent); }
