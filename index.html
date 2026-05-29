@@ -1593,7 +1593,10 @@ $('#btn-compose-send').addEventListener('click', sendCompose);
     } else if (id === 'kbd-space') {
       insertAtCursor(' ');
     } else if (id === 'kbd-enter') {
-      sendCompose();
+      // Insert a newline instead of sending — Enter sits next to backspace and
+      // misfires were sending messages early. Send via the blue Send button.
+      composeDisplay.focus();
+      document.execCommand('insertLineBreak');
     } else if (id === 'kbd-emoji') {
       openEmojiPicker();
     } else if (v) {
