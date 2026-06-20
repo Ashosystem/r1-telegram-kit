@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=240, height=282, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Telegram v1.08</title>
+<!-- Rabbit "Claude Code" skin font: Fredoka (rounded UI) + JetBrains Mono (code pills) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
   /* ─── Reset & Base ────────────────────────────────────────────── */
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -540,6 +543,131 @@
     touch-action: manipulation;
   }
   .emoji-btn:active { background: #2a2a2a; }
+
+  /* ════════════════════════════════════════════════════════════════════
+     RABBIT R1 — "Claude Code" THEME (appended skin, source-order wins)
+     Added 2026-06-20. Revert: restore index.html.bak-rabbitskin-20260620.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --r1-bg:        #05060b;
+    --r1-bg-2:      #0b0e18;
+    --r1-line:      #161b29;
+    --r1-orange:    #fe5f00;
+    --r1-orange-2:  #ff7a2b;
+    --r1-orange-ink:#120a02;
+    --r1-text:      #e6ecf6;
+    --r1-user:      #c7d4ea;
+    --r1-chrome:    #b9c7dd;
+    --r1-dim:       #6b7689;
+    --r1-round: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --r1-mono:  'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    --bg:        var(--r1-bg);
+    --surface:   var(--r1-bg-2);
+    --surface-h: #14192a;
+    --accent:    var(--r1-orange);
+    --accent-dim:#b34400;
+    --text:      var(--r1-text);
+    --text-dim:  var(--r1-dim);
+    --out-bg:    transparent;
+    --in-bg:     transparent;
+    --font:      var(--r1-round);
+    --mono:      var(--r1-mono);
+  }
+  html, body {
+    background: radial-gradient(120% 90% at 50% 0%, #0a0e1c 0%, var(--r1-bg) 70%);
+    color: var(--r1-text);
+    font-family: var(--r1-round);
+    letter-spacing: 0.2px;
+  }
+  /* Floating-bubble header: no solid bar, circular controls (Telegram-style) */
+  #app .header { background: transparent; border-bottom: none; height: 30px; min-height: 30px; padding: 0 6px; gap: 5px; }
+  #app .header .back {
+    color: var(--r1-chrome); font-size: 20px; font-weight: 600; line-height: 1;
+    width: 24px; height: 24px; padding: 0; margin: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--r1-bg-2); border: 1px solid var(--r1-line); border-radius: 50%;
+  }
+  /* round bubble treatment for the right-side header controls */
+  #app .header #btn-tts, #app .header #btn-keyboard, #app .header #btn-fontsize {
+    width: 24px; height: 24px; flex-shrink: 0; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--r1-bg-2); border: 1px solid var(--r1-line); border-radius: 50%;
+    font-size: 12px; opacity: 0.9;
+  }
+  #app .header .title { color: var(--r1-chrome); font-weight: 600; letter-spacing: 0.4px; justify-content: center; text-align: center; }
+  #app .header .badge-total, #app .unread-badge { background: var(--r1-orange); color: var(--r1-orange-ink); }
+  #app .btn-read-all { color: var(--r1-chrome); border-color: var(--r1-line); }
+  #app .chat-item { border-bottom: 1px solid var(--r1-line); }
+  #app .chat-item.selected, #app .chat-item:active { background: var(--r1-bg-2); }
+  #app .chat-name { color: var(--r1-text); font-weight: 600; }
+  #app .chat-preview, #app .chat-time { color: var(--r1-dim); }
+  #app .chat-avatar { background: var(--r1-bg-2); border: 1px solid var(--r1-line); color: var(--r1-orange); }
+  #app .msg-bubble { background: none; border-radius: 0; max-width: 100%; padding: 2px 0; font-size: var(--msg-font, 13px); line-height: 1.4; font-weight: 500; }
+  #app .msg-bubble.in  { align-self: flex-start; color: #ffffff; text-align: left; }   /* rabbit = pure white */
+  #app .msg-bubble.out { align-self: flex-end; color: #c2ccdc; text-align: right; }    /* me = slightly off (cooler/dimmer) */
+  #app .messages-list { gap: 10px; padding: 8px 10px; }
+  #app .msg-sender { color: var(--r1-orange); font-weight: 700; font-size: 11px; }
+  #app .msg-time   { color: var(--r1-dim); font-size: 8px; }
+  #app .msg-bubble code, #app code { background: var(--r1-orange); color: var(--r1-orange-ink); font-family: var(--r1-mono); font-size: 11px; font-weight: 600; padding: 1px 4px; border-radius: 3px; letter-spacing: 0; }
+  #app .msg-bubble pre { background: var(--r1-bg-2); border: 1px solid var(--r1-line); border-left: 2px solid var(--r1-orange); border-radius: 4px; padding: 6px 7px; font-family: var(--r1-mono); font-size: 10px; }
+  #app .msg-bubble pre code { background: none; color: var(--r1-text); padding: 0; }
+  #app .msg-reply { border-left: 2px solid var(--r1-orange); background: rgba(254,95,0,0.08); color: var(--r1-dim); }
+  #app .msg-reply-author { color: var(--r1-orange); }
+  #app .msg-reaction { background: rgba(254,95,0,0.14); color: var(--r1-text); }
+  #app .audio-player { background: var(--r1-bg-2); border: 1px solid var(--r1-line); }
+  #app .audio-player.playing { border-color: var(--r1-orange); background: rgba(254,95,0,0.16); }
+  #app .audio-play-btn { color: var(--r1-orange); }
+  #app .status-bar { background: transparent; border-top: 1px solid var(--r1-line); color: var(--r1-dim); letter-spacing: 0.4px; }
+  #app .status-bar .hint { color: var(--r1-orange); }
+  #app .status-bar .r1-icon { color: var(--r1-chrome); font-size: 16px; padding: 0 10px; }
+  #app .status-bar .r1-icon:active { color: var(--r1-orange); }
+  #app #conn-dot { box-shadow: 0 0 4px currentColor; }
+  #app #compose-display { background: var(--r1-bg-2); border: 1px solid var(--r1-line); color: var(--r1-text); caret-color: var(--r1-orange); font-family: var(--r1-round); }
+  #app #compose-display:empty::before { color: var(--r1-dim); }
+  #app #virtual-keyboard { background: var(--r1-bg); }
+  #app .key { background: var(--r1-bg-2); border: 1px solid var(--r1-line); border-bottom: 2px solid #0a0d16; color: var(--r1-text); font-family: var(--r1-round); font-weight: 600; }
+  #app .key:active { background: #1a2032; }
+  #app .key.action { background: var(--r1-orange); border-color: var(--r1-orange-2); color: var(--r1-orange-ink); }
+  #app .key.action:active { background: var(--r1-orange-2); }
+  #app .key.shifted { background: #182033; color: var(--r1-orange); }
+  #app .confirm-text { background: var(--r1-bg-2); border: 1px solid var(--r1-line); color: var(--r1-text); }
+  #app .btn-cancel { background: var(--r1-bg-2); border: 1px solid var(--r1-line); }
+  #app .btn-send   { background: var(--r1-orange); color: var(--r1-orange-ink); }
+  #app .toast { background: var(--r1-bg-2); border: 1px solid var(--r1-line); color: var(--r1-text); }
+  #app .spinner { border-color: var(--r1-line); border-top-color: var(--r1-orange); }
+  #app .state-msg { color: var(--r1-dim); }
+  #app .rec-ring { border-color: var(--r1-orange); }
+  #app .rec-dot  { background: var(--r1-orange); }
+  #app .rec-label{ color: var(--r1-orange); }
+  #app .chat-list::-webkit-scrollbar-thumb, #app .messages-list::-webkit-scrollbar-thumb { background: var(--r1-line); }
+
+  /* ── Overlay header: floats over content; messages scroll full-height behind it ── */
+  #screen-chat .header, #screen-list .header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+    /* soft scrim: content fades into the navy behind the floating bubbles (no hard bar) */
+    background: linear-gradient(to bottom, var(--r1-bg) 42%, rgba(5,6,11,0.78) 72%, rgba(5,6,11,0) 100%);
+    pointer-events: none;            /* let scroll/touch pass through the empty zones */
+  }
+  /* only the actual controls capture touch; titles don't block scrolling */
+  #screen-chat .header .back, #screen-chat .header #btn-tts, #screen-chat .header #btn-keyboard,
+  #screen-list .header .badge-total, #screen-list .header .btn-read-all, #screen-list .header #conn-dot, #screen-list .header #btn-fontsize {
+    pointer-events: auto;
+  }
+  /* start content just below the floating header; it scrolls up behind the scrim */
+  #screen-chat .messages-list { padding-top: 34px; padding-bottom: 34px; }
+  #screen-list  .chat-list    { padding-top: 34px; }
+  /* Bottom overlay: content fades into the navy behind the floating PTT tab */
+  #screen-chat::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42px;
+    background: linear-gradient(to top, var(--r1-bg) 30%, rgba(5,6,11,0.7) 60%, rgba(5,6,11,0) 100%);
+    pointer-events: none; z-index: 15;
+  }
+
+  /* ── Subtle per-post dividers: a faint hairline sized to each message,
+       fading outward in that speaker's direction (in→right, out→left) ── */
+  #app .msg-bubble::after { content: ''; display: block; height: 1px; margin-top: 8px; }
+  #app .msg-bubble.in::after  { background: linear-gradient(to right, rgba(230,236,246,0.13), rgba(230,236,246,0) 85%); }
+  #app .msg-bubble.out::after { background: linear-gradient(to left,  rgba(199,212,234,0.13), rgba(199,212,234,0) 85%); }
 </style>
 </head>
 <body>
@@ -554,6 +682,7 @@
     <div id="conn-dot" style="width:6px;height:6px;border-radius:50%;background:#f9a825" title="connecting"></div>
     <div class="badge-total" id="total-unread" style="display:none">0</div>
     <button class="btn-read-all" id="btn-read-all" style="display:none">✓ read</button>
+    <div id="btn-fontsize" style="cursor:pointer;touch-action:manipulation;" title="Conversation font size">Aa</div>
   </div>
   <div class="chat-list" id="chat-list"></div>
   <div class="status-bar">
@@ -569,17 +698,18 @@
   <div class="header">
     <div class="back" id="btn-back">‹</div>
     <div class="title" id="chat-title">Chat</div>
-    <button id="btn-tts" style="font-size:14px;cursor:pointer;padding:6px 8px;opacity:0.5;background:none;border:none;color:inherit;touch-action:manipulation;min-width:30px;" title="Toggle TTS">🔇</button>
-    <div id="btn-keyboard" style="font-size:13px;cursor:pointer;padding:2px 4px;opacity:0.7;" title="Type message">⌨️</div>
+    <button id="btn-tts" style="cursor:pointer;color:inherit;touch-action:manipulation;" title="Toggle TTS">🔇</button>
+    <div id="btn-keyboard" style="cursor:pointer;touch-action:manipulation;" title="Type message">⌨️</div>
   </div>
   <div class="messages-list" id="messages-list"></div>
   <div id="ptt-btn" style="
-    height: 36px; min-height: 36px;
+    position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); z-index: 20;
+    height: 20px; min-height: 20px; padding: 0 11px;
     display: flex; align-items: center; justify-content: center;
-    background: #1a1a1a; border-top: 1px solid #2a2a2a;
-    font-size: 11px; font-weight: 600; color: #2aabee;
-    user-select: none; -webkit-user-select: none;
-    cursor: pointer; letter-spacing: 0.5px;
+    background: var(--r1-bg-2); border: 1px solid var(--r1-line); border-radius: 10px;
+    font-size: 9px; font-weight: 600; color: var(--r1-chrome);
+    user-select: none; -webkit-user-select: none; white-space: nowrap;
+    cursor: pointer; letter-spacing: 0.4px;
   ">🎙 HOLD TO SPEAK</div>
 </div>
 
@@ -1463,16 +1593,16 @@ document.addEventListener('keyup', (e) => {
 const pttBtn = $('#ptt-btn');
 
 function pttTouchStart() {
-  pttBtn.style.background = '#e53935';
-  pttBtn.style.color = '#fff';
+  pttBtn.style.background = '#fe5f00';
+  pttBtn.style.color = '#120a02';
   pttBtn.textContent = '🔴 RECORDING…';
   // Route through the same event path as the physical button
   window.dispatchEvent(new Event('longPressStart'));
 }
 
 function pttTouchEnd() {
-  pttBtn.style.background = '#1a1a1a';
-  pttBtn.style.color = '#2aabee';
+  pttBtn.style.background = '#0b0e18';
+  pttBtn.style.color = '#b9c7dd';
   pttBtn.textContent = '🎙 HOLD TO SPEAK';
   window.dispatchEvent(new Event('longPressEnd'));
 }
@@ -1922,6 +2052,47 @@ function playPing() {
   } catch (_) {}
 }
 
+// ─── Conversation font-size control ──────────────────────────────────
+let msgFont = parseInt(localStorage.getItem('r1tg_fontsize'), 10);
+if (!msgFont || msgFont < 10 || msgFont > 22) msgFont = 13;
+function applyMsgFont() {
+  document.documentElement.style.setProperty('--msg-font', msgFont + 'px');
+  const v = document.getElementById('fs-value');   if (v) v.textContent = msgFont;
+  const p = document.getElementById('fs-preview'); if (p) p.style.fontSize = msgFont + 'px';
+}
+function setMsgFont(n) {
+  msgFont = Math.max(10, Math.min(22, n));
+  try { localStorage.setItem('r1tg_fontsize', String(msgFont)); } catch (_) {}
+  applyMsgFont();
+}
+applyMsgFont();
+// Wire the popup after parse — its markup sits after this inline script.
+document.addEventListener('DOMContentLoaded', function () {
+  const pop = document.getElementById('fontsize-popup');
+  if (!pop) return;
+  const open  = () => { applyMsgFont(); pop.style.display = 'flex'; };
+  const close = () => { pop.style.display = 'none'; };
+  const btn = document.getElementById('btn-fontsize');
+  if (btn) btn.addEventListener('click', open);
+  document.getElementById('fs-minus').addEventListener('click', () => setMsgFont(msgFont - 1));
+  document.getElementById('fs-plus').addEventListener('click',  () => setMsgFont(msgFont + 1));
+  document.getElementById('fs-done').addEventListener('click', close);
+  pop.addEventListener('click', (e) => { if (e.target === pop) close(); });
+});
 </script>
+
+<!-- Conversation font-size popup -->
+<div id="fontsize-popup" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(5,6,11,0.6);">
+  <div style="background:var(--r1-bg-2);border:1px solid var(--r1-line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:150px;">
+    <div style="color:var(--r1-chrome);font-size:11px;font-weight:600;letter-spacing:0.4px;">CONVERSATION FONT</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div id="fs-minus" style="width:30px;height:30px;border-radius:50%;background:var(--r1-bg);border:1px solid var(--r1-line);color:var(--r1-chrome);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;touch-action:manipulation;">−</div>
+      <div id="fs-value" style="color:#fff;font-size:15px;font-weight:700;min-width:34px;text-align:center;">13</div>
+      <div id="fs-plus" style="width:30px;height:30px;border-radius:50%;background:var(--r1-orange);border:1px solid var(--r1-orange-2);color:var(--r1-orange-ink);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;touch-action:manipulation;">+</div>
+    </div>
+    <div id="fs-preview" style="color:#fff;font-size:13px;line-height:1.3;max-width:130px;text-align:center;">The quick brown fox</div>
+    <div id="fs-done" style="color:var(--r1-chrome);font-size:11px;border:1px solid var(--r1-line);border-radius:6px;padding:3px 16px;cursor:pointer;touch-action:manipulation;">Done</div>
+  </div>
+</div>
 </body>
 </html>
