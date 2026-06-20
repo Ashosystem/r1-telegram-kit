@@ -188,6 +188,7 @@ app.get('/chats/:id/photo', auth, async (req, res) => {
   }
 });
 
+
 // ─── GET /chats/:id/messages ─────────────────────────────────────────
 app.get('/chats/:id/messages', auth, async (req, res) => {
   try {
