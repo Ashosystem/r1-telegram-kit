@@ -1578,8 +1578,8 @@ window.addEventListener('sideClick', () => {
   // On chat screen: intentionally do nothing — hold the button for STT.
 });
 
-window.addEventListener('scrollUp',   () => handleScroll('down'));
-window.addEventListener('scrollDown', () => handleScroll('up'));
+window.addEventListener('scrollUp',   () => handleScroll('up'));
+window.addEventListener('scrollDown', () => handleScroll('down'));
 
 // ─── Keyboard Fallback (desktop testing) ──────────────────────────────
 // Translates keyboard input into the same window events the R1 bridge dispatches,
